@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة اختبار السيرفر 🚀</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #1e1e24;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 { color: #00ffcc; text-shadow: 0 0 10px #00ffcc; margin-bottom: 20px;}
+        input {
+            width: 90%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #00ffcc;
+            background: #121212;
+            color: #fff;
+            border-radius: 5px;
+            outline: none;
+            text-align: left;
+            direction: ltr;
+        }
+        button {
+            padding: 12px 25px;
+            background: #00ffcc;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00ffcc;
+            margin: 10px 5px;
+            transition: 0.3s;
+        }
+        button:hover { background: #fff; box-shadow: 0 0 20px #fff; }
+        .log {
+            background: #000;
+            height: 200px;
+            overflow-y: auto;
+            text-align: left;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            font-family: monospace;
+            direction: ltr;
+        }
+        .status {
+            margin: 15px 0;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+        .offline { color: #ff0055; text-shadow: 0 0 10px #ff0055; }
+        .online { color: #00ffcc; text-shadow: 0 0 10px #00ffcc; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>لوحة اختبار السيرفر 🚀</h1>
+        
+        <div>
+            <input type="text" id="serverUrl" placeholder="https://your-server.onrender.com" value="">
+            <br>
+            <button onclick="connectToServer()">اتصال بالسيرفر 🔌</button>
+        </div>
+
+        <div class="status offline" id="statusText">🔴 غير متصل</div>
+
+        <div>
+            <button onclick="sendTestMessage()" id="sendBtn" style="display:none; background: #ff0055; color: #fff; box-shadow: 0 0 10px #ff0055;">إرسال بيانات اختبار 📩</button>
+        </div>
+
+        <div class="log" id="logArea">
+            <div style="color: #666;">-- سجل الأحداث سيظهر هنا --</div>
+        </div>
+    </div>
+
+    <!-- استدعاء مكتبة Socket.io -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        let socket;
+        const logArea = document.getElementById('logArea');
+        const statusText = document.getElementById('statusText');
+        const sendBtn = document.getElementById('sendBtn');
+
+        function log(msg, color = "#fff") {
+            const time = new Date().toLocaleTimeString();
+            logArea.innerHTML += `<div style="color: ${color}; margin-bottom: 5px;">[${time}] ${msg}</div>`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function connectToServer() {
+            const url = document.getElementById('serverUrl').value.trim();
+            if (!url) {
+                alert("الرجاء إدخال رابط السيرفر أولاً!");
+                return;
+            }
+
+            if (socket) socket.disconnect(); // فصل الاتصال القديم
+
+            log(`جاري الاتصال بـ: ${url}...`, "#ffaa00");
+            socket = io(url);
+
+            socket.on('connect', () => {
+                statusText.innerHTML = "🟢 متصل بنجاح!";
+                statusText.className = "status online";
+                sendBtn.style.display = "inline-block";
+                log(`تم الاتصال! (ID: ${socket.id})`, "#00ffcc");
+            });
+
+            socket.on('disconnect', () => {
+                statusText.innerHTML = "🔴 غير متصل";
+                statusText.className = "status offline";
+                sendBtn.style.display = "none";
+                log("انقطع الاتصال بالسيرفر.", "#ff0055");
+            });
+
+            // استقبال البيانات من السيرفر (إذا كان هناك لاعب آخر يختبر)
+            socket.on('otherPlayerMoved', (data) => {
+                log(`📥 تم استقبال بيانات: X=${data.x}, Y=${data.y}`, "#aaa");
+            });
+        }
+
+        function sendTestMessage() {
+            if (socket && socket.connected) {
+                // إرسال بيانات عشوائية تحاكي حركة اللاعب
+                const testData = { id: socket.id, x: Math.floor(Math.random()*500), y: Math.floor(Math.random()*500) };
+                socket.emit('playerMoved', testData);
+                log(`📤 تم إرسال بيانات: X=${testData.x}, Y=${testData.y}`, "#00aaff");
+            }
+        }
+    </script>
+</body>
+</html>
