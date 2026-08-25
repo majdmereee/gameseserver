@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة X O أونلاين 🎮</title>
+    <title>هوكي نيون أونلاين 🏑</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -15,218 +15,328 @@
             justify-content: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden;
+            touch-action: none; /* لمنع تحديث الصفحة عند سحب الشاشة بالموبايل */
         }
         .container {
             background: #1e1e24;
-            padding: 30px;
+            padding: 20px;
             border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.1);
             text-align: center;
             width: 90%;
-            max-width: 400px;
+            max-width: 450px;
+            z-index: 10;
         }
-        h1 { color: #00ffcc; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
+        h1 { margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
         input {
-            width: 85%; padding: 15px; margin: 20px 0;
-            border: 2px solid #00ffcc; background: #121212;
+            width: 85%; padding: 12px; margin: 15px 0;
+            border: 2px solid #555; background: #121212;
             color: #fff; border-radius: 8px; outline: none;
             font-size: 16px; text-align: center;
         }
-        input:focus { box-shadow: 0 0 10px #00ffcc; }
+        input:focus { border-color: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
+        .btn-container { display: flex; gap: 10px; justify-content: center; }
         button {
-            padding: 15px 25px; background: #00ffcc; color: #000;
+            padding: 12px 15px; color: #000;
             border: none; border-radius: 8px; font-weight: bold;
-            font-size: 18px; cursor: pointer; transition: 0.3s;
-            width: 95%; margin-top: 10px;
+            font-size: 16px; cursor: pointer; transition: 0.3s;
+            flex: 1;
         }
-        button:hover { background: #fff; box-shadow: 0 0 20px #fff; }
+        .btn-p1 { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
+        .btn-p2 { background: #ff0055; box-shadow: 0 0 10px #ff0055; color: #fff;}
+        button:hover { filter: brightness(1.2); }
         
-        /* تصميم لوحة اللعبة (نيون) */
-        .board {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-top: 25px;
+        #gameArea { display: none; flex-direction: column; align-items: center; }
+        #status { margin: 10px 0; font-size: 1.2em; font-weight: bold; color: #ffcc00; }
+        .score-board {
+            display: flex; justify-content: space-between; width: 100%; max-width: 400px;
+            font-size: 1.5em; font-weight: bold; margin-bottom: 10px;
         }
-        .cell {
-            background: #2a2a35;
-            height: 110px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4em;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: 0.2s;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-        }
-        .cell:hover { background: #3a3a45; box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
-        .x-color { color: #00ffcc; text-shadow: 0 0 20px #00ffcc; }
-        .o-color { color: #ff0055; text-shadow: 0 0 20px #ff0055; }
+        .score-p2 { color: #ff0055; text-shadow: 0 0 10px #ff0055; }
+        .score-p1 { color: #00ffcc; text-shadow: 0 0 10px #00ffcc; }
         
-        #gameArea { display: none; }
-        #status { margin: 15px 0; font-size: 1.3em; font-weight: bold; color: #ffcc00; }
+        canvas {
+            background: #1a1a24;
+            border: 3px solid #333;
+            border-radius: 10px;
+            box-shadow: inset 0 0 20px #000;
+            max-width: 100%;
+            height: auto;
+        }
     </style>
 </head>
 <body>
 
     <!-- شاشة الدخول -->
     <div class="container" id="loginArea">
-        <h1>لعبة X O أونلاين 🎮</h1>
-        <p style="color: #aaa;">أدخل اسمك لتبدأ التحدي!</p>
+        <h1 style="color: #00ffcc;">هوكي نيون 🏑</h1>
+        <p style="color: #aaa;">أدخل اسمك واختار جهتك للعب!</p>
         <input type="text" id="playerName" placeholder="اكتب اسمك هنا..." required>
-        <button onclick="joinGame()" id="joinBtn">دخول اللعبة 🚀</button>
+        <div class="btn-container">
+            <button onclick="joinGame(1)" class="btn-p1">دخول (أسفل - أزرق)</button>
+            <button onclick="joinGame(2)" class="btn-p2">دخول (أعلى - أحمر)</button>
+        </div>
+        <p style="font-size: 12px; color: #666; margin-top: 15px;">الفائز من يسجل 3 أهداف أولاً!</p>
     </div>
 
     <!-- شاشة اللعب -->
-    <div class="container" id="gameArea">
-        <h1>X O 🔥</h1>
-        <div id="status">جاري الاتصال بالسيرفر...</div>
-        
-        <div class="board" id="board">
-            <div class="cell" onclick="makeMove(0)"></div>
-            <div class="cell" onclick="makeMove(1)"></div>
-            <div class="cell" onclick="makeMove(2)"></div>
-            <div class="cell" onclick="makeMove(3)"></div>
-            <div class="cell" onclick="makeMove(4)"></div>
-            <div class="cell" onclick="makeMove(5)"></div>
-            <div class="cell" onclick="makeMove(6)"></div>
-            <div class="cell" onclick="makeMove(7)"></div>
-            <div class="cell" onclick="makeMove(8)"></div>
+    <div id="gameArea">
+        <div class="score-board">
+            <div class="score-p2" id="score2">0 (الخصم)</div>
+            <div id="status">جاري الاتصال...</div>
+            <div class="score-p1" id="score1">(أنت) 0</div>
         </div>
+        
+        <!-- مساحة اللعبة (الملعب) -->
+        <canvas id="hockeyBoard" width="400" height="600"></canvas>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
+        const SERVER_URL = 'https://render-kr1o.onrender.com/';
         let socket;
         let myName = "";
-        let mySymbol = ""; // 'X' أو 'O'
-        let currentTurn = "X"; // اللعبة دائماً تبدأ بـ X
-        let boardState = ["", "", "", "", "", "", "", "", ""];
+        let opponentName = "الخصم";
+        let myRole = 0; // 1 = أسفل(أزرق), 2 = أعلى(أحمر)
         let gameOver = false;
 
-        // تم تثبيت رابط السيرفر هنا مباشرة
-        const SERVER_URL = 'https://render-kr1o.onrender.com/';
+        // إعدادات اللوحة والفيزياء
+        const canvas = document.getElementById('hockeyBoard');
+        const ctx = canvas.getContext('2d');
+        
+        let p1 = { x: 200, y: 520, r: 25, color: '#00ffcc', score: 0 }; // لاعب الأسفل
+        let p2 = { x: 200, y: 80, r: 25, color: '#ff0055', score: 0 };  // لاعب الأعلى
+        let puck = { x: 200, y: 300, r: 15, dx: 0, dy: 0, color: '#ffcc00' }; // القرص
 
-        function joinGame() {
+        const goalWidth = 140; // عرض المرمى
+
+        function joinGame(role) {
             myName = document.getElementById('playerName').value.trim();
-            
-            if (!myName) {
-                alert("الرجاء إدخال اسمك أولاً!");
-                return;
+            if (!myName) return alert("الرجاء إدخال اسمك أولاً!");
+
+            myRole = role;
+            document.getElementById('loginArea').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'flex';
+
+            // تعديل واجهة النقاط لتناسب مكانك
+            if(myRole === 2) {
+                document.getElementById('score2').innerText = "(أنت) 0";
+                document.getElementById('score1').innerText = "0 (الخصم)";
             }
 
-            document.getElementById('joinBtn').innerText = "جاري الاتصال...";
-            
             // الاتصال بالسيرفر
             socket = io(SERVER_URL);
 
             socket.on('connect', () => {
-                document.getElementById('loginArea').style.display = 'none';
-                document.getElementById('gameArea').style.display = 'block';
-                document.getElementById('status').innerText = "تم الاتصال 🟢! أول شخص يلعب يكون X";
+                document.getElementById('status').innerText = "🟢 متصل! العب";
+                document.getElementById('status').style.color = "#00ffcc";
             });
 
-            // استقبال البيانات من اللاعب الآخر
+            // استقبال البيانات
             socket.on('otherPlayerMoved', (data) => {
                 if (data.type === 'move') {
-                    // تحديث اللوحة بحركة الخصم
-                    boardState[data.index] = data.symbol;
-                    updateBoardUI();
+                    opponentName = data.name;
                     
-                    // إذا لم يكن لدي رمز بعد، والخصم لعب X، أنا أصبح O
-                    if (!mySymbol) mySymbol = (data.symbol === 'X') ? 'O' : 'X';
-
-                    currentTurn = (data.symbol === 'X') ? 'O' : 'X';
-                    checkWin(data.symbol, data.name);
+                    if (myRole === 1 && data.role === 2) {
+                        // أنا اللاعب الأول، استقبل حركة اللاعب الثاني فقط
+                        p2.x = data.p2.x; p2.y = data.p2.y;
+                    } 
+                    else if (myRole === 2 && data.role === 1) {
+                        // أنا اللاعب الثاني، استقبل حركة اللاعب الأول + مكان القرص + النتيجة
+                        p1.x = data.p1.x; p1.y = data.p1.y;
+                        puck.x = data.puck.x; puck.y = data.puck.y;
+                        p1.score = data.score1; p2.score = data.score2;
+                        updateScores();
+                    }
+                    checkWin();
                 } 
                 else if (data.type === 'chat') {
-                    // استقبال رسالة الخسارة من الخصم (آلية "تصبح على خير")
+                    // رسالة الخسارة "تصبح على خير"
                     alert(`رسالة من ${data.name}:\n\n${data.message}`);
                     document.getElementById('status').innerText = `${data.name} يقول: ${data.message}`;
-                    document.getElementById('status').style.color = "#00ffcc";
                 }
             });
 
-            socket.on('connect_error', () => {
-                alert("تعذر الاتصال بالسيرفر، تأكد أن السيرفر يعمل على Render.");
-                document.getElementById('joinBtn').innerText = "دخول اللعبة 🚀";
-            });
+            // بدء حلقة اللعبة
+            setInterval(gameLoop, 1000 / 40); // 40 إطار بالثانية
         }
 
-        function makeMove(index) {
-            if (gameOver || boardState[index] !== "") return; // منع اللعب بمربع ممتلئ
+        // حركة الماوس واللمس
+        function movePaddle(clientX, clientY) {
+            if (gameOver) return;
+            const rect = canvas.getBoundingClientRect();
+            // حساب الإحداثيات ليتناسب مع حجم الشاشة
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
             
-            // إذا كان لدي رمز، لكن ليس دوري
-            if (mySymbol && currentTurn !== mySymbol) {
-                return alert("ليس دورك! انتظر الخصم.");
-            }
+            let mx = (clientX - rect.left) * scaleX;
+            let my = (clientY - rect.top) * scaleY;
 
-            // إذا كانت أول حركة في اللعبة، اللاعب الذي يضغط أولاً يكون X
-            if (!mySymbol) mySymbol = currentTurn;
-
-            // تنفيذ الحركة
-            boardState[index] = mySymbol;
-            updateBoardUI();
-
-            // إرسال الحركة للخصم عبر السيرفر
-            socket.emit('playerMoved', { 
-                type: 'move', 
-                index: index, 
-                symbol: mySymbol, 
-                name: myName 
-            });
-
-            currentTurn = (mySymbol === 'X') ? 'O' : 'X';
-            checkWin(mySymbol, myName);
-        }
-
-        function updateBoardUI() {
-            const cells = document.getElementsByClassName('cell');
-            for (let i = 0; i < 9; i++) {
-                cells[i].innerText = boardState[i];
-                cells[i].className = "cell " + (boardState[i] === 'X' ? "x-color" : (boardState[i] === 'O' ? "o-color" : ""));
+            // تحديد مجال الحركة حسب دورك
+            if (myRole === 1) {
+                p1.x = Math.max(p1.r, Math.min(canvas.width - p1.r, mx));
+                p1.y = Math.max(canvas.height/2 + p1.r, Math.min(canvas.height - p1.r, my));
+            } else {
+                p2.x = Math.max(p2.r, Math.min(canvas.width - p2.r, mx));
+                p2.y = Math.max(p2.r, Math.min(canvas.height/2 - p2.r, my));
             }
         }
 
-        function checkWin(lastSymbol, lastPlayerName) {
-            const winConditions = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8], // أفقي
-                [0, 3, 6], [1, 4, 7], [2, 5, 8], // عمودي
-                [0, 4, 8], [2, 4, 6]             // قطري
-            ];
+        canvas.addEventListener('mousemove', (e) => movePaddle(e.clientX, e.clientY));
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // منع نزول الشاشة
+            movePaddle(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
 
-            let won = false;
-            for (let combo of winConditions) {
-                if (boardState[combo[0]] && boardState[combo[0]] === boardState[combo[1]] && boardState[combo[1]] === boardState[combo[2]]) {
-                    won = true;
-                    break;
+        // الاصطدام بين المضرب والقرص
+        function collide(paddle, p) {
+            let dx = p.x - paddle.x;
+            let dy = p.y - paddle.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist < paddle.r + p.r) {
+                let angle = Math.atan2(dy, dx);
+                let speed = Math.sqrt(p.dx*p.dx + p.dy*p.dy) + 3; // تسريع الطابة عند الضرب
+                if (speed > 15) speed = 15; // السرعة القصوى
+                
+                p.dx = Math.cos(angle) * speed;
+                p.dy = Math.sin(angle) * speed;
+                
+                // إبعاد القرص عن المضرب لمنع الالتصاق
+                p.x = paddle.x + Math.cos(angle) * (paddle.r + p.r + 1);
+                p.y = paddle.y + Math.sin(angle) * (paddle.r + p.r + 1);
+            }
+        }
+
+        function gameLoop() {
+            if (gameOver || !socket) return;
+
+            // اللاعب الأول هو من يقوم بحساب حركة القرص للجميع (الفيزياء)
+            if (myRole === 1) {
+                puck.x += puck.dx;
+                puck.y += puck.dy;
+                
+                // احتكاك لتقليل السرعة تدريجياً
+                puck.dx *= 0.99; puck.dy *= 0.99;
+
+                // الاصطدام بالجدران الجانبية
+                if (puck.x - puck.r < 0) { puck.x = puck.r; puck.dx *= -1; }
+                if (puck.x + puck.r > canvas.width) { puck.x = canvas.width - puck.r; puck.dx *= -1; }
+
+                // الاصطدام بالجدران العلوية والسفلية (والأهداف)
+                let goalLeft = (canvas.width - goalWidth) / 2;
+                let goalRight = goalLeft + goalWidth;
+
+                // المرمى العلوي
+                if (puck.y - puck.r < 0) {
+                    if (puck.x > goalLeft && puck.x < goalRight) {
+                        p1.score++; updateScores(); resetPuck(); checkWin();
+                    } else {
+                        puck.y = puck.r; puck.dy *= -1;
+                    }
                 }
+                // المرمى السفلي
+                if (puck.y + puck.r > canvas.height) {
+                    if (puck.x > goalLeft && puck.x < goalRight) {
+                        p2.score++; updateScores(); resetPuck(); checkWin();
+                    } else {
+                        puck.y = canvas.height - puck.r; puck.dy *= -1;
+                    }
+                }
+
+                // حساب الاصطدامات مع المضارب
+                collide(p1, puck);
+                collide(p2, puck);
+
+                // إرسال البيانات (فيزياء كاملة) للخصم
+                socket.emit('playerMoved', { type: 'move', role: 1, p1: p1, puck: puck, score1: p1.score, score2: p2.score, name: myName });
+            } 
+            else if (myRole === 2) {
+                // اللاعب الثاني يرسل حركته فقط
+                socket.emit('playerMoved', { type: 'move', role: 2, p2: p2, name: myName });
             }
 
-            if (won) {
+            draw();
+        }
+
+        function resetPuck() {
+            puck.x = canvas.width / 2;
+            puck.y = canvas.height / 2;
+            puck.dx = 0; puck.dy = 0;
+        }
+
+        function updateScores() {
+            if(myRole === 1) {
+                document.getElementById('score1').innerText = `(أنت) ${p1.score}`;
+                document.getElementById('score2').innerText = `${p2.score} (${opponentName})`;
+            } else {
+                document.getElementById('score2').innerText = `(أنت) ${p2.score}`;
+                document.getElementById('score1').innerText = `${p1.score} (${opponentName})`;
+            }
+        }
+
+        function checkWin() {
+            if (gameOver) return;
+            if (p1.score >= 3 || p2.score >= 3) {
                 gameOver = true;
-                if (lastSymbol === mySymbol) {
+                
+                // تحديد من الفائز ومن الخاسر
+                let iWon = (p1.score >= 3 && myRole === 1) || (p2.score >= 3 && myRole === 2);
+                let winnerName = (p1.score >= 3) ? (myRole === 1 ? myName : opponentName) : (myRole === 2 ? myName : opponentName);
+                
+                if (iWon) {
                     document.getElementById('status').innerText = "🎉 مبروك! لقد فزت!";
                     document.getElementById('status').style.color = "#00ffcc";
                 } else {
                     document.getElementById('status').innerText = "💀 لقد خسرت!";
                     document.getElementById('status').style.color = "#ff0055";
                     
-                    // إرسال رسالة "تصبح على خير" تلقائياً للفائز
-                    const msg = `تصبح على خير يا ${lastPlayerName} 😴`;
+                    // الخاسر يرسل الرسالة القاضية للفائز تلقائياً
+                    const msg = `تصبح على خير يا ${winnerName} 😴`;
                     socket.emit('playerMoved', { type: 'chat', message: msg, name: myName });
-                }
-            } else if (!boardState.includes("")) {
-                gameOver = true;
-                document.getElementById('status').innerText = "🤝 تعادل!";
-            } else {
-                if (mySymbol) {
-                    document.getElementById('status').innerText = (currentTurn === mySymbol) ? "دورك الآن! إلعب" : "انتظر دور الخصم...";
                 }
             }
         }
+
+        // رسم الملعب والعناصر
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // خط المنتصف والدائرة
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 50, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // رسم المرميين
+            let goalLeft = (canvas.width - goalWidth) / 2;
+            ctx.fillStyle = 'rgba(255, 0, 85, 0.2)'; // مرمى أحمر
+            ctx.fillRect(goalLeft, 0, goalWidth, 10);
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.2)'; // مرمى أزرق
+            ctx.fillRect(goalLeft, canvas.height - 10, goalWidth, 10);
+
+            // رسم اللاعبين
+            ctx.beginPath(); ctx.arc(p1.x, p1.y, p1.r, 0, Math.PI * 2);
+            ctx.fillStyle = p1.color; ctx.fill(); ctx.shadowBlur = 15; ctx.shadowColor = p1.color;
+            
+            ctx.beginPath(); ctx.arc(p2.x, p2.y, p2.r, 0, Math.PI * 2);
+            ctx.fillStyle = p2.color; ctx.fill(); ctx.shadowColor = p2.color;
+
+            // رسم القرص
+            ctx.beginPath(); ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI * 2);
+            ctx.fillStyle = puck.color; ctx.fill(); ctx.shadowColor = puck.color;
+            
+            ctx.shadowBlur = 0; // إعادة الظل للصفر عشان ما يأثر على الملعب
+        }
+
+        draw(); // رسمة أولية
     </script>
 </body>
 </html>
