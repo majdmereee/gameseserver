@@ -86,7 +86,8 @@
                 document.getElementById('score1').innerText = "0 (الخصم)";
             }
 
-            socket = io(SERVER_URL);
+            // --- هذا هو السطر السحري الجديد الذي يسرع الاتصال ---
+            socket = io(SERVER_URL, { transports: ['websocket'], upgrade: false });
             
             socket.on('connect', () => { 
                 document.getElementById('status').innerText = `متصل! بانتظار الخصم في غرفة ${myRoom}...`; 
@@ -136,7 +137,7 @@
                 }
             });
 
-            // تحديث الشاشة 60 مرة بالثانية
+            // تحديث الشاشة 60 مرة بالثانية للحفاظ على النعومة المطلقة
             setInterval(gameLoop, 1000 / 60); 
         }
 
@@ -168,7 +169,7 @@
         canvas.addEventListener('mousemove', (e) => movePaddle(e.clientX, e.clientY));
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); movePaddle(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
 
-        // محرك الفيزياء (يعمل محلياً عند اللاعبين للحفاظ على النعومة المطلقة)
+        // محرك الفيزياء (يعمل محلياً عند اللاعبين)
         function gameLoop() {
             if (!isPlaying || gameOver) return;
 
