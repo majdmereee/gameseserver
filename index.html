@@ -3,276 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>هوكي نيون أونلاين 🏑</title>
+    <title>لعبة المافيا الذكية 🕵️‍♂️</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; touch-action: none; }
-        .container { background: #1e1e24; padding: 20px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,255,204,0.1); text-align: center; width: 90%; max-width: 450px; z-index: 10; }
-        h1 { color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.5); margin-bottom: 5px; }
-        .input-group { display: flex; gap: 10px; margin: 15px 0; }
-        input { flex: 1; padding: 12px; border: 2px solid #555; background: #121212; color: #fff; border-radius: 8px; text-align: center; outline: none;}
-        input:focus { border-color: #00ffcc; }
-        .btn-container { display: flex; gap: 10px; justify-content: center; margin-top: 10px;}
-        button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; flex: 1; transition: 0.3s; color:#000;}
-        .btn-p1 { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; }
-        .btn-p2 { background: #ff0055; box-shadow: 0 0 10px #ff0055; color: #fff;}
-        button:hover { filter: brightness(1.2); }
+        :root {
+            --primary: #0ca143;
+            --primary-light: #e6f9ed;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --night-bg: #111827;
+            --night-surface: #1f2937;
+            --day-bg: #f4f7f6;
+            --day-surface: #ffffff;
+            --text-dark: #111827;
+            --text-light: #f9fafb;
+            --radius: 16px;
+            --transition: all 0.4s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
         
-        #gameArea { display: none; flex-direction: column; align-items: center; }
-        #status { margin: 10px 0; font-size: 1.1em; font-weight: bold; color: #ffcc00; }
-        .score-board { display: flex; justify-content: space-between; width: 100%; max-width: 400px; font-size: 1.5em; font-weight: bold; margin-bottom: 10px; }
-        .score-p2 { color: #ff0055; text-shadow: 0 0 10px #ff0055; }
-        .score-p1 { color: #00ffcc; text-shadow: 0 0 10px #00ffcc; }
-        canvas { background: #1a1a24; border: 3px solid #333; border-radius: 10px; box-shadow: inset 0 0 20px #000; max-width: 100%; }
+        body { 
+            background-color: var(--day-bg); 
+            color: var(--text-dark); 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; 
+            transition: var(--transition);
+        }
+
+        body.night-mode {
+            background-color: var(--night-bg);
+            color: var(--text-light);
+        }
+
+        .container { 
+            width: 95%; max-width: 800px; 
+            background: var(--day-surface); 
+            padding: 30px; 
+            border-radius: var(--radius); 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1); 
+            transition: var(--transition);
+            display: flex; flex-direction: column; gap: 20px;
+        }
+
+        body.night-mode .container {
+            background: var(--night-surface);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        h1 { font-size: 2rem; font-weight: 900; color: var(--primary); text-align: center; }
+        body.night-mode h1 { color: #34d399; }
+
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-weight: 700; font-size: 1rem; }
+        
+        input, select { 
+            width: 100%; padding: 14px; border-radius: 12px; 
+            border: 2px solid #e5e7eb; font-size: 1rem; outline: none; 
+            background: transparent; color: inherit;
+            transition: var(--transition);
+        }
+        
+        body.night-mode input { border-color: #374151; }
+        input:focus { border-color: var(--primary); }
+
+        .btn { 
+            padding: 16px; background: var(--primary); color: white; 
+            border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 900; 
+            cursor: pointer; transition: transform 0.2s, filter 0.2s; 
+            text-align: center; width: 100%;
+        }
+        .btn:hover { filter: brightness(1.1); }
+        .btn:active { transform: scale(0.98); }
+        .btn-danger { background: var(--danger); }
+
+        /* شاشات اللعبة */
+        #gameScreen { display: none; flex-direction: column; gap: 20px; height: 80vh; }
+        
+        .header-bar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb; }
+        body.night-mode .header-bar { border-color: #374151; }
+        
+        .chat-box { 
+            flex: 1; overflow-y: auto; padding: 15px; 
+            background: var(--day-bg); border-radius: 12px; 
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        body.night-mode .chat-box { background: #111827; }
+
+        .message { padding: 10px 15px; border-radius: 12px; max-width: 80%; line-height: 1.5; }
+        .msg-system { background: #e0f2fe; color: #0284c7; align-self: center; font-weight: bold; font-size: 0.9rem;}
+        body.night-mode .msg-system { background: #1e3a8a; color: #93c5fd; }
+        
+        .msg-other { background: white; border: 1px solid #e5e7eb; align-self: flex-start; }
+        body.night-mode .msg-other { background: #374151; border: none; }
+        
+        .msg-me { background: var(--primary-light); color: var(--primary); align-self: flex-end; }
+        body.night-mode .msg-me { background: #064e3b; color: #34d399; }
+
+        .chat-input { display: flex; gap: 10px; }
+        .chat-input input { flex: 1; }
+        .chat-input button { width: auto; padding: 0 25px; }
+
+        .players-list { display: flex; gap: 10px; flex-wrap: wrap; }
+        .player-badge { padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; background: #f3f4f6; }
+        body.night-mode .player-badge { background: #374151; }
+        .player-dead { opacity: 0.5; text-decoration: line-through; color: var(--danger); }
     </style>
 </head>
 <body>
 
-    <div class="container" id="loginArea">
-        <h1>هوكي نيون 🏑</h1>
-        <p style="color: #aaa; font-size: 14px;">أدخل اسمك ورقم الغرفة للتحدي</p>
+    <!-- شاشة الدخول (Lobby) -->
+    <div class="container" id="loginScreen">
+        <h1>المافيا 🕵️‍♂️</h1>
+        <p style="text-align: center; color: var(--text-muted);">أدخل بياناتك للاتصال بالغرفة وتوليد البوتات</p>
         
         <div class="input-group">
-            <input type="text" id="playerName" placeholder="اسمك..." required>
-            <input type="number" id="roomCode" placeholder="رقم الغرفة (مثال: 5)" required>
+            <label>مفتاح Gemini API (للبوتات):</label>
+            <input type="password" id="apiKey" placeholder="AI.. أدخل مفتاحك هنا لتشغيل الـ">
         </div>
 
-        <div class="btn-container">
-            <button onclick="joinGame(1)" class="btn-p1">دخول (أزرق)</button>
-            <button onclick="joinGame(2)" class="btn-p2">دخول (أحمر)</button>
+        <div class="input-group">
+            <label>اسم اللاعب:</label>
+            <input type="text" id="playerName" placeholder="اكتب اسمك...">
         </div>
+
+        <div class="input-group">
+            <label>رقم الغرفة:</label>
+            <input type="number" id="roomCode" placeholder="مثال: 99">
+        </div>
+
+        <button class="btn" onclick="joinLobby()">دخول الغرفة 🚀</button>
     </div>
 
-    <div id="gameArea">
-        <div class="score-board">
-            <div class="score-p2" id="score2">0 (الخصم)</div>
-            <div id="status">جاري الاتصال بالسيرفر...</div>
-            <div class="score-p1" id="score1">(أنت) 0</div>
+    <!-- شاشة اللعبة -->
+    <div class="container" id="gameScreen">
+        <div class="header-bar">
+            <div>
+                <span style="font-weight: bold; font-size: 1.2rem;" id="uiPhase">☀️ النهار</span>
+                <div style="font-size: 0.9rem; opacity: 0.8;" id="uiRole">دورك: جاري التوزيع...</div>
+            </div>
+            <button class="btn btn-danger" style="width: auto; padding: 8px 15px; font-size: 0.9rem;" onclick="hostStartGame()" id="startBtn">بدء اللعبة (توليد البوتات)</button>
         </div>
-        <canvas id="hockeyBoard" width="400" height="600"></canvas>
+
+        <div class="players-list" id="playersListUI">
+            <!-- قائمة اللاعبين تظهر هنا -->
+        </div>
+
+        <div class="chat-box" id="chatBox">
+            <div class="message msg-system">مرحباً بك في الغرفة! بانتظار البقية...</div>
+        </div>
+
+        <div class="chat-input" id="actionArea">
+            <input type="text" id="chatInput" placeholder="اكتب رسالتك للقرية..." onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button class="btn" onclick="sendMessage()">إرسال</button>
+        </div>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         const SERVER_URL = 'https://render-kr1o.onrender.com/';
         let socket;
-        let myName = "", myRoom = "", opponentName = "الخصم";
-        let myRole = 0; 
-        let isPlaying = false;
-        let iAmReady = false;
-        let gameOver = false;
+        let myName, myRoom, apiKey;
+        let players = [];
+        let isHost = false; 
+        let phase = 'waiting'; // waiting, day, night
+        let myRole = 'مدني';
 
-        const canvas = document.getElementById('hockeyBoard');
-        const ctx = canvas.getContext('2d');
-        
-        let p1 = { x: 200, y: 520, r: 25, score: 0 }; 
-        let p2 = { x: 200, y: 80, r: 25, score: 0 };  
-        let puck = { x: 200, y: 300, r: 15, dx: 0, dy: 0 };
-        const goalWidth = 140;
-
-        function joinGame(role) {
+        // ==========================================
+        // 1. نظام الاتصال وإدارة السيرفر الوهمي
+        // ==========================================
+        function joinLobby() {
+            apiKey = document.getElementById('apiKey').value.trim();
             myName = document.getElementById('playerName').value.trim();
             myRoom = document.getElementById('roomCode').value.trim();
-            
-            if (!myName || !myRoom) return alert("الرجاء كتابة اسمك ورقم الغرفة!");
 
-            myRole = role;
-            iAmReady = true;
+            if (!myName || !myRoom) return alert("أدخل الاسم ورقم الغرفة!");
 
-            document.getElementById('loginArea').style.display = 'none';
-            document.getElementById('gameArea').style.display = 'flex';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'flex';
 
-            if(myRole === 2) {
-                document.getElementById('score2').innerText = "(أنت) 0";
-                document.getElementById('score1').innerText = "0 (الخصم)";
-            }
+            players.push({ name: myName, type: 'human', alive: true });
+            updatePlayersUI();
 
-            // --- هذا هو السطر السحري الجديد الذي يسرع الاتصال ---
             socket = io(SERVER_URL, { transports: ['websocket'], upgrade: false });
-            
-            socket.on('connect', () => { 
-                document.getElementById('status').innerText = `متصل! بانتظار الخصم في غرفة ${myRoom}...`; 
-                // إرسال إشارة "أنا هنا" لأي شخص موجود بالغرفة
-                socket.emit('playerMoved', { type: 'hello', room: myRoom, role: myRole, name: myName });
+
+            socket.on('connect', () => {
+                appendMessage('system', 'تم الاتصال بسيرفر الألعاب بنجاح ✔️');
+                // أول شخص يدخل الغرفة يعين نفسه "مضيف" لإدارة البوتات وحالة اللعبة
+                if(players.length === 1) isHost = true;
+                
+                socket.emit('playerMoved', { type: 'join', room: myRoom, name: myName });
             });
 
-            // استقبال كل شيء من السيرفر البسيط
             socket.on('otherPlayerMoved', (data) => {
-                if (data.room !== myRoom) return; // فلتر الغرف الوهمية
+                if (data.room !== myRoom) return;
 
-                // نظام الانتظار وبدء اللعبة
-                if (data.type === 'hello' && data.role !== myRole) {
-                    opponentName = data.name;
-                    socket.emit('playerMoved', { type: 'hello_back', room: myRoom, role: myRole, name: myName });
-                    startGame();
-                } 
-                else if (data.type === 'hello_back' && data.role !== myRole) {
-                    opponentName = data.name;
-                    startGame();
-                } 
+                if (data.type === 'join' && data.name !== myName) {
+                    if(!players.find(p => p.name === data.name)) {
+                        players.push({ name: data.name, type: 'human', alive: true });
+                        appendMessage('system', `انضم ${data.name} إلى الغرفة`);
+                        updatePlayersUI();
+                        // المضيف يرسل القائمة المحدثة
+                        if(isHost) socket.emit('playerMoved', { type: 'sync_players', room: myRoom, players: players });
+                    }
+                }
                 
-                // استقبال حركة الخصم فوراً (بدون لاغ)
-                else if (data.type === 'paddle') {
-                    if (data.role === 1) { p1.x = data.x; p1.y = data.y; }
-                    else { p2.x = data.x; p2.y = data.y; }
-                } 
-                
-                // استقبال فيزياء الطابة لما الخصم يضربها
-                else if (data.type === 'puck_sync') {
-                    puck.x = data.px; puck.y = data.py;
-                    puck.dx = data.dx; puck.dy = data.dy;
-                } 
-                
-                // تحديث النتيجة
-                else if (data.type === 'score_update') {
-                    p1.score = data.s1; p2.score = data.s2;
-                    updateScoresUI();
-                    resetPuck();
-                    checkWin();
+                if (data.type === 'sync_players' && !isHost) {
+                    players = data.players;
+                    updatePlayersUI();
                 }
 
-                // رسالة الخسارة "تصبح على خير"
-                else if (data.type === 'chat') {
-                    alert(`رسالة من ${data.name}:\n\n${data.message}`);
-                    document.getElementById('status').innerText = `${data.name}: ${data.message}`;
+                if (data.type === 'chat') {
+                    appendMessage(data.name === myName ? 'me' : 'other', `${data.name}: ${data.message}`);
+                }
+
+                if (data.type === 'start_game') {
+                    phase = 'day';
+                    players = data.players; // تحديث مع البوتات
+                    let me = players.find(p => p.name === myName);
+                    myRole = me ? me.role : 'مراقب';
+                    document.getElementById('uiRole').innerText = `دورك السري: ${myRole}`;
+                    document.getElementById('startBtn').style.display = 'none';
+                    appendMessage('system', 'بدأت اللعبة! تم توزيع الأدوار سراً.');
+                    updatePlayersUI();
+                }
+
+                if (data.type === 'change_phase') {
+                    phase = data.phase;
+                    togglePhaseUI();
                 }
             });
-
-            // تحديث الشاشة 60 مرة بالثانية للحفاظ على النعومة المطلقة
-            setInterval(gameLoop, 1000 / 60); 
         }
 
-        function startGame() {
-            isPlaying = true;
-            document.getElementById('status').innerText = "🔥 بدأت اللعبة!";
-            document.getElementById('status').style.color = "#00ffcc";
-            updateScoresUI();
-        }
+        // ==========================================
+        // 2. إدارة حالة اللعبة (للمضيف فقط)
+        // ==========================================
+        async function hostStartGame() {
+            if (!isHost) return alert("فقط مؤسس الغرفة يمكنه بدء اللعبة!");
+            if (!apiKey) return alert("بدون مفتاح API لا يمكن توليد البوتات الذكية!");
 
-        // حركة المضرب الخاصة بك (مباشرة وبدون أي انتظار للسيرفر)
-        function movePaddle(clientX, clientY) {
-            if (gameOver || !isPlaying) return;
-            const rect = canvas.getBoundingClientRect();
-            let mx = (clientX - rect.left) * (canvas.width / rect.width);
-            let my = (clientY - rect.top) * (canvas.height / rect.height);
+            document.getElementById('startBtn').innerText = 'جاري توليد البوتات ⏳...';
+            document.getElementById('startBtn').disabled = true;
 
-            if (myRole === 1) {
-                p1.x = Math.max(p1.r, Math.min(canvas.width - p1.r, mx));
-                p1.y = Math.max(canvas.height/2 + p1.r, Math.min(canvas.height - p1.r, my));
-                socket.emit('playerMoved', { type: 'paddle', room: myRoom, role: 1, x: p1.x, y: p1.y });
-            } else {
-                p2.x = Math.max(p2.r, Math.min(canvas.width - p2.r, mx));
-                p2.y = Math.max(p2.r, Math.min(canvas.height/2 - p2.r, my));
-                socket.emit('playerMoved', { type: 'paddle', room: myRoom, role: 2, x: p2.x, y: p2.y });
-            }
-        }
-
-        canvas.addEventListener('mousemove', (e) => movePaddle(e.clientX, e.clientY));
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); movePaddle(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-
-        // محرك الفيزياء (يعمل محلياً عند اللاعبين)
-        function gameLoop() {
-            if (!isPlaying || gameOver) return;
-
-            // تحريك القرص محلياً
-            puck.x += puck.dx; puck.y += puck.dy;
-            puck.dx *= 0.99; puck.dy *= 0.99;
-
-            // جدران
-            if (puck.x - puck.r < 0) { puck.x = puck.r; puck.dx *= -1; }
-            if (puck.x + puck.r > canvas.width) { puck.x = canvas.width - puck.r; puck.dx *= -1; }
-
-            // نظام الأهداف (اللاعب 1 هو المسؤول عن إعلان الهدف لمنع التكرار)
-            let goalLeft = 130, goalRight = 270;
-            if (myRole === 1) {
-                if (puck.y - puck.r < 0) {
-                    if (puck.x > goalLeft && puck.x < goalRight) { p1.score++; handleGoal(); }
-                    else { puck.y = puck.r; puck.dy *= -1; }
-                }
-                else if (puck.y + puck.r > canvas.height) {
-                    if (puck.x > goalLeft && puck.x < goalRight) { p2.score++; handleGoal(); }
-                    else { puck.y = canvas.height - puck.r; puck.dy *= -1; }
-                }
-            } else {
-                // اللاعب 2 يكتفي بالاصطدام الجداري وينتظر تأكيد الهدف من 1
-                if (puck.y - puck.r < 0 && (puck.x <= goalLeft || puck.x >= goalRight)) { puck.y = puck.r; puck.dy *= -1; }
-                if (puck.y + puck.r > canvas.height && (puck.x <= goalLeft || puck.x >= goalRight)) { puck.y = canvas.height - puck.r; puck.dy *= -1; }
-            }
-
-            // نظام التصادم الذكي (كل لاعب بيحسب ضربته بيده وبيبعت النتيجة فوراً للثاني)
-            let hit = false;
-            if (myRole === 1) hit = checkCollision(p1, puck);
-            if (myRole === 2) hit = checkCollision(p2, puck);
-
-            if (hit) {
-                // إذا ضربت الطابة، بجبر جهاز الخصم ياخد نفس مسار الطابة عندي
-                socket.emit('playerMoved', { type: 'puck_sync', room: myRoom, px: puck.x, py: puck.y, dx: puck.dx, dy: puck.dy });
-            }
-
-            draw();
-        }
-
-        function checkCollision(paddle, p) {
-            let dx = p.x - paddle.x, dy = p.y - paddle.y;
-            let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < paddle.r + p.r) {
-                let angle = Math.atan2(dy, dx);
-                let speed = Math.sqrt(p.dx*p.dx + p.dy*p.dy) + 4; // تسريع بسيط
-                if (speed > 15) speed = 15;
-                p.dx = Math.cos(angle) * speed; p.dy = Math.sin(angle) * speed;
-                p.x = paddle.x + Math.cos(angle) * (paddle.r + p.r + 1);
-                p.y = paddle.y + Math.sin(angle) * (paddle.r + p.r + 1);
-                return true;
-            }
-            return false;
-        }
-
-        function handleGoal() {
-            resetPuck();
-            socket.emit('playerMoved', { type: 'score_update', room: myRoom, s1: p1.score, s2: p2.score });
-            updateScoresUI();
-            checkWin();
-        }
-
-        function resetPuck() { puck.x = 200; puck.y = 300; puck.dx = 0; puck.dy = 0; }
-
-        function updateScoresUI() {
-            if(myRole === 1) {
-                document.getElementById('score1').innerText = `(أنت) ${p1.score}`;
-                document.getElementById('score2').innerText = `${p2.score} (${opponentName})`;
-            } else {
-                document.getElementById('score2').innerText = `(أنت) ${p2.score}`;
-                document.getElementById('score1').innerText = `${p1.score} (${opponentName})`;
-            }
-        }
-
-        function checkWin() {
-            if (p1.score >= 3 || p2.score >= 3) {
-                gameOver = true;
-                let iWon = (p1.score >= 3 && myRole === 1) || (p2.score >= 3 && myRole === 2);
-                let winnerName = (p1.score >= 3) ? (myRole === 1 ? myName : opponentName) : (myRole === 2 ? myName : opponentName);
-                
-                if (iWon) {
-                    document.getElementById('status').innerText = "🎉 مبروك! لقد فزت!";
-                } else {
-                    document.getElementById('status').innerText = "💀 لقد خسرت!";
-                    socket.emit('playerMoved', { type: 'chat', room: myRoom, message: `تصبح على خير يا ${winnerName} 😴`, name: myName });
-                }
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath(); ctx.moveTo(0, 300); ctx.lineTo(400, 300); ctx.strokeStyle = '#333'; ctx.lineWidth = 4; ctx.stroke();
-            ctx.beginPath(); ctx.arc(200, 300, 50, 0, Math.PI * 2); ctx.stroke();
+            // توليد بوتات لتعويض النقص حتى يصبح العدد 5
+            let neededBots = 5 - players.length;
+            const botNames = ["طارق (AI)", "سارة (AI)", "كمال (AI)", "نور (AI)"];
             
-            ctx.fillStyle = 'rgba(255, 0, 85, 0.2)'; ctx.fillRect(130, 0, 140, 10);
-            ctx.fillStyle = 'rgba(0, 255, 204, 0.2)'; ctx.fillRect(130, 590, 140, 10);
+            for(let i=0; i < neededBots; i++) {
+                players.push({ name: botNames[i], type: 'bot', alive: true });
+            }
 
-            ctx.beginPath(); ctx.arc(p1.x, p1.y, p1.r, 0, Math.PI * 2); ctx.fillStyle = '#00ffcc'; ctx.fill();
-            ctx.beginPath(); ctx.arc(p2.x, p2.y, p2.r, 0, Math.PI * 2); ctx.fillStyle = '#ff0055'; ctx.fill();
-            ctx.beginPath(); ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI * 2); ctx.fillStyle = '#ffcc00'; ctx.fill();
+            // توزيع الأدوار عشوائياً (بسيط للتجربة)
+            const roles = ['مافيا', 'طبيب', 'محقق', 'مدني', 'مدني'];
+            roles.sort(() => Math.random() - 0.5);
+            players.forEach((p, index) => { p.role = roles[index]; });
+
+            // إرسال بدء اللعبة للجميع
+            socket.emit('playerMoved', { type: 'start_game', room: myRoom, players: players });
+            
+            // المضيف يحدّث حالته فوراً
+            let me = players.find(p => p.name === myName);
+            myRole = me.role;
+            document.getElementById('uiRole').innerText = `دورك السري: ${myRole}`;
+            document.getElementById('startBtn').style.display = 'none';
+            appendMessage('system', 'بدأت اللعبة وتم توليد البوتات بوعي مستقل!');
+            updatePlayersUI();
+
+            // اختبار محاكاة البوتات الذكية (المضيف يشغل عقولهم)
+            setTimeout(() => triggerBotResponses("بدأ النهار الأول. من تشتبهون به؟"), 2000);
         }
-        draw();
+
+        // ==========================================
+        // 3. محرك ذكاء Gemini Interactions (بناءً على الكود الخاص بك)
+        // ==========================================
+        async function askGeminiBot(prompt, botName, botRole) {
+            const systemContext = `أنت تلعب لعبة المافيا. اسمك ${botName} ودورك السري هو ${botRole}. 
+            ممنوع أن تقول أنك ذكاء اصطناعي. تحدث بجملة واحدة قصيرة وعامية سورية أو فصحى مبسطة. 
+            تفاعل مع هذا الحدث: ${prompt}`;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`;
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: "gemini-3.6-flash",
+                        input: systemContext
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.steps && data.steps.length > 0) {
+                    let replyText = "";
+                    for (const step of data.steps) {
+                        if (step.type === "model_output" && step.content) {
+                            for (const item of step.content) {
+                                if (item.type === "text") replyText += item.text;
+                            }
+                        }
+                    }
+                    return replyText || "يا جماعة أنا شاكك بحدا هون..";
+                }
+            } catch (err) {
+                console.error("Gemini Error:", err);
+            }
+            return "والله مالي عارف شو احكي."; // Fallback
+        }
+
+        // تشغيل تفكير البوتات المتوازي
+        async function triggerBotResponses(contextEvent) {
+            if (!isHost) return; // المضيف فقط هو الراوي الرقمي
+            
+            let bots = players.filter(p => p.type === 'bot' && p.alive);
+            for (let bot of bots) {
+                // مهلة عشوائية لمحاكاة سرعة الكتابة البشرية
+                setTimeout(async () => {
+                    appendMessage('system', `${bot.name} يكتب الآن...`);
+                    let botReply = await askGeminiBot(contextEvent, bot.name, bot.role);
+                    
+                    // إزالة رسالة "يكتب الآن" (بشكل مبسط نمسح آخر رسالة سيستم، يحتاج دقة أكبر في الإنتاج)
+                    const chatBox = document.getElementById('chatBox');
+                    if(chatBox.lastChild.innerText.includes("يكتب الآن")) chatBox.removeChild(chatBox.lastChild);
+
+                    // إرسال رد البوت للسيرفر
+                    socket.emit('playerMoved', { type: 'chat', room: myRoom, name: bot.name, message: botReply });
+                }, Math.random() * 5000 + 2000);
+            }
+        }
+
+        // ==========================================
+        // 4. واجهة المستخدم والتحكم اللحظي
+        // ==========================================
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if(!msg) return;
+
+            socket.emit('playerMoved', { type: 'chat', room: myRoom, name: myName, message: msg });
+            input.value = '';
+
+            // إذا أنا المضيف، أجعل البوتات ترد على رسالتي
+            if(isHost) {
+                triggerBotResponses(`اللاعب ${myName} يقول: "${msg}". ماذا ترد عليه؟`);
+            }
+        }
+
+        function appendMessage(type, text) {
+            const box = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = `message msg-${type}`;
+            div.innerText = text;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function updatePlayersUI() {
+            const list = document.getElementById('playersListUI');
+            list.innerHTML = '';
+            players.forEach(p => {
+                let span = document.createElement('span');
+                span.className = `player-badge ${p.alive ? '' : 'player-dead'}`;
+                span.innerText = p.name;
+                list.appendChild(span);
+            });
+        }
+
+        // تبديل الليل والنهار تجريبياً (لإظهار قوة الواجهة)
+        function togglePhaseUI() {
+            if (phase === 'night') {
+                document.body.classList.add('night-mode');
+                document.getElementById('uiPhase').innerText = '🌙 الليل';
+                appendMessage('system', 'حل الظلام.. المافيا تستيقظ 🤫');
+            } else {
+                document.body.classList.remove('night-mode');
+                document.getElementById('uiPhase').innerText = '☀️ النهار';
+                appendMessage('system', 'أشرقت الشمس.. وقت النقاش!');
+            }
+        }
+
+        // أوامر للمضيف لاختبار الليل والنهار
+        window.switchDayNight = () => {
+            if(!isHost) return;
+            let newPhase = phase === 'day' ? 'night' : 'day';
+            socket.emit('playerMoved', { type: 'change_phase', room: myRoom, phase: newPhase });
+        }
     </script>
 </body>
 </html>
