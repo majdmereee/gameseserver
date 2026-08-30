@@ -2,392 +2,956 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لعبة المافيا الذكية 🕵️‍♂️</title>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mafia AI - المافيا الذكية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* =========================================
+           [1] Core Variables & Hardware Acceleration
+           ========================================= */
         :root {
-            --primary: #0ca143;
-            --primary-light: #e6f9ed;
-            --danger: #dc2626;
-            --danger-light: #fee2e2;
-            --night-bg: #111827;
-            --night-surface: #1f2937;
-            --day-bg: #f4f7f6;
-            --day-surface: #ffffff;
-            --text-dark: #111827;
-            --text-light: #f9fafb;
-            --radius: 16px;
-            --transition: all 0.4s ease;
+            /* Colors */
+            --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.4);
+            --danger: #f43f5e;
+            --danger-glow: rgba(244, 63, 94, 0.4);
+            --info: #3b82f6;
+            --info-glow: rgba(59, 130, 246, 0.4);
+            --warning: #f59e0b;
+            --mafia-dark: #0f172a;
+            
+            /* Backgrounds */
+            --bg-night: linear-gradient(135deg, #020617, #0f172a, #1e1b4b);
+            --bg-day: linear-gradient(135deg, #f0f9ff, #e0f2fe, #fef3c7);
+            
+            /* Glassmorphism */
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            
+            /* Typography */
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            
+            /* Metrics */
+            --radius-xl: 32px;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            
+            /* 120fps Easing */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-in-out-circ: cubic-bezier(0.785, 0.135, 0.15, 0.86);
+            --transition-fast: 0.2s var(--ease-out-expo);
+            --transition-smooth: 0.4s var(--ease-out-expo);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
+        body.day-mode {
+            --glass-bg: rgba(255, 255, 255, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --glass-shadow: 0 8px 32px 0 rgba(30, 41, 59, 0.1);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            background: var(--bg-day);
+        }
+
+        /* GPU Acceleration resets */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0; padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--bg-night);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow: hidden; /* Prevent body scroll, handle internally */
+            transition: background 1.5s var(--ease-in-out-circ), color 1s ease;
+            will-change: background;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* =========================================
+           [2] Advanced Keyframe Animations
+           ========================================= */
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translate3d(0, 40px, 0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
         
-        body { 
-            background-color: var(--day-bg); 
-            color: var(--text-dark); 
-            display: flex; justify-content: center; align-items: center; 
-            min-height: 100vh; 
-            transition: var(--transition);
+        @keyframes slideInRight {
+            0% { opacity: 0; transform: translate3d(50px, 0, 0); }
+            100% { opacity: 1; transform: translate3d(0, 0, 0); }
         }
 
-        body.night-mode {
-            background-color: var(--night-bg);
-            color: var(--text-light);
+        @keyframes float {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, -10px, 0); }
         }
 
-        .container { 
-            width: 95%; max-width: 800px; 
-            background: var(--day-surface); 
-            padding: 30px; 
-            border-radius: var(--radius); 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1); 
-            transition: var(--transition);
-            display: flex; flex-direction: column; gap: 20px;
+        @keyframes pulseAlert {
+            0% { box-shadow: 0 0 0 0 var(--danger-glow); }
+            70% { box-shadow: 0 0 20px 15px rgba(244, 63, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
         }
 
-        body.night-mode .container {
-            background: var(--night-surface);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        @keyframes cinematicOverlay {
+            0% { opacity: 0; transform: scale(1.2); }
+            20% { opacity: 1; transform: scale(1); }
+            80% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.9); pointer-events: none; }
         }
 
-        h1 { font-size: 2rem; font-weight: 900; color: var(--primary); text-align: center; }
-        body.night-mode h1 { color: #34d399; }
+        @keyframes typingBounce {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, -6px, 0); }
+        }
 
-        .input-group { display: flex; flex-direction: column; gap: 8px; }
-        label { font-weight: 700; font-size: 1rem; }
+        /* =========================================
+           [3] Layout & Screens
+           ========================================= */
+        .app-container {
+            width: 100%;
+            height: 100vh;
+            max-width: 1400px;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transform: translate3d(0, 20px, 0) scale(0.98);
+            transition: all 0.6s var(--ease-out-expo);
+            will-change: transform, opacity;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translate3d(0, 0, 0) scale(1);
+            z-index: 10;
+        }
+
+        /* =========================================
+           [4] Glassmorphism UI Components
+           ========================================= */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--glass-shadow);
+            transform: translateZ(0); /* Hardware accel trigger */
+        }
+
+        .btn {
+            font-family: 'Tajawal', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            padding: 16px 32px;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: var(--transition-smooth);
+            will-change: transform, box-shadow;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .btn::after {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.3), rgba(255,255,255,0));
+            transform: skewX(-25deg);
+            transition: 0.5s;
+        }
+
+        .btn:hover::after { left: 150%; }
+
+        .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 8px 25px var(--primary-glow); }
+        .btn-primary:hover { transform: translate3d(0, -4px, 0); box-shadow: 0 12px 30px var(--primary-glow); }
         
-        input, select { 
-            width: 100%; padding: 14px; border-radius: 12px; 
-            border: 2px solid #e5e7eb; font-size: 1rem; outline: none; 
-            background: transparent; color: inherit;
-            transition: var(--transition);
+        .btn-danger { background: var(--danger); color: #fff; box-shadow: 0 8px 25px var(--danger-glow); }
+        .btn-danger:hover { transform: translate3d(0, -4px, 0); box-shadow: 0 12px 30px var(--danger-glow); }
+
+        .input-group { position: relative; margin-bottom: 24px; }
+        .input-group label {
+            display: block; font-weight: 700; color: var(--text-muted);
+            margin-bottom: 8px; font-size: 0.95rem;
+            transform: translate3d(0,0,0);
+        }
+        .input-group input {
+            width: 100%; padding: 18px 24px;
+            background: rgba(0,0,0,0.2);
+            border: 2px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1.1rem; font-weight: 600;
+            transition: var(--transition-fast);
+        }
+        body.day-mode .input-group input { background: rgba(255,255,255,0.7); }
+        .input-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-glow);
+            outline: none;
+        }
+
+        /* =========================================
+           [5] Specific Screen Layouts
+           ========================================= */
+        /* Login Screen */
+        #loginScreen { align-items: center; justify-content: center; }
+        .login-card {
+            width: 100%; max-width: 480px; padding: 40px;
+            animation: fadeInUp 0.8s var(--ease-out-expo) forwards;
+        }
+        .brand { text-align: center; margin-bottom: 40px; animation: float 6s ease-in-out infinite; }
+        .brand i { font-size: 4.5rem; color: var(--primary); margin-bottom: 15px; filter: drop-shadow(0 0 15px var(--primary-glow)); }
+        .brand h1 { font-size: 3rem; font-weight: 900; letter-spacing: -1px; margin: 0; }
+
+        /* Game Screen */
+        .game-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 24px;
+            height: calc(100vh - 40px);
+            width: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            .game-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .sidebar { max-height: 40vh; }
+        }
+
+        /* Sidebar & 3D Role Card */
+        .sidebar { display: flex; flex-direction: column; gap: 24px; }
+        
+        .role-scene { height: 200px; perspective: 1200px; cursor: pointer; }
+        .role-card {
+            width: 100%; height: 100%; position: relative;
+            transition: transform 0.8s var(--ease-in-out-circ);
+            transform-style: preserve-3d;
+            border-radius: var(--radius-lg);
+        }
+        .role-card.is-flipped { transform: rotateY(180deg); }
+        .role-face {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+        }
+        .role-front { background: rgba(30, 41, 59, 0.8); }
+        .role-back { transform: rotateY(180deg); background: var(--primary); color: #fff; }
+        
+        /* Players List */
+        .players-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 20px; }
+        .players-header { font-size: 1.2rem; font-weight: 800; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; margin-bottom: 15px; }
+        .players-list { flex: 1; overflow-y: auto; padding-right: 5px; scrollbar-width: thin; }
+        .players-list::-webkit-scrollbar { width: 6px; }
+        .players-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
+        
+        .player-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px; margin-bottom: 10px;
+            background: rgba(0,0,0,0.15); border-radius: var(--radius-md);
+            border: 1px solid transparent;
+            transition: var(--transition-fast);
+            animation: slideInRight 0.4s var(--ease-out-expo) forwards;
+        }
+        body.day-mode .player-item { background: rgba(255,255,255,0.4); }
+        .player-item:hover { transform: translate3d(5px, 0, 0); border-color: var(--primary); background: var(--glass-bg); }
+        .player-item.is-dead {
+            opacity: 0.5; filter: grayscale(1);
+            background: rgba(244, 63, 94, 0.1); border-color: var(--danger-glow);
+        }
+        .player-item.is-dead .player-name { text-decoration: line-through; }
+
+        /* Main Game Area */
+        .main-arena { display: flex; flex-direction: column; gap: 24px; overflow: hidden; }
+        
+        .header-controls {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 24px;
         }
         
-        body.night-mode input { border-color: #374151; }
-        input:focus { border-color: var(--primary); }
-
-        .btn { 
-            padding: 16px; background: var(--primary); color: white; 
-            border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 900; 
-            cursor: pointer; transition: transform 0.2s, filter 0.2s; 
-            text-align: center; width: 100%;
+        .phase-badge {
+            font-size: 1.5rem; font-weight: 900;
+            display: flex; align-items: center; gap: 12px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
-        .btn:hover { filter: brightness(1.1); }
-        .btn:active { transform: scale(0.98); }
-        .btn-danger { background: var(--danger); }
 
-        /* شاشات اللعبة */
-        #gameScreen { display: none; flex-direction: column; gap: 20px; height: 80vh; }
-        
-        .header-bar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb; }
-        body.night-mode .header-bar { border-color: #374151; }
-        
-        .chat-box { 
-            flex: 1; overflow-y: auto; padding: 15px; 
-            background: var(--day-bg); border-radius: 12px; 
-            display: flex; flex-direction: column; gap: 10px;
+        /* Chat System */
+        .chat-container {
+            flex: 1; display: flex; flex-direction: column;
+            overflow: hidden; padding: 0;
+            position: relative;
         }
-        body.night-mode .chat-box { background: #111827; }
-
-        .message { padding: 10px 15px; border-radius: 12px; max-width: 80%; line-height: 1.5; }
-        .msg-system { background: #e0f2fe; color: #0284c7; align-self: center; font-weight: bold; font-size: 0.9rem;}
-        body.night-mode .msg-system { background: #1e3a8a; color: #93c5fd; }
         
-        .msg-other { background: white; border: 1px solid #e5e7eb; align-self: flex-start; }
-        body.night-mode .msg-other { background: #374151; border: none; }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 24px;
+            display: flex; flex-direction: column; gap: 18px;
+            scroll-behavior: smooth;
+        }
+
+        .msg-bubble {
+            max-width: 80%; padding: 16px 20px;
+            border-radius: 20px; position: relative;
+            font-size: 1.1rem; line-height: 1.6; font-weight: 500;
+            animation: fadeInUp 0.4s var(--ease-out-expo) forwards;
+            will-change: transform, opacity;
+        }
+        .msg-meta { font-size: 0.85rem; font-weight: 800; opacity: 0.7; margin-bottom: 6px; display: block; }
         
-        .msg-me { background: var(--primary-light); color: var(--primary); align-self: flex-end; }
-        body.night-mode .msg-me { background: #064e3b; color: #34d399; }
+        .msg-me { background: var(--primary); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px var(--primary-glow); }
+        .msg-other { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
+        body.day-mode .msg-other { background: #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        .msg-system {
+            align-self: center; background: transparent; color: var(--warning);
+            font-weight: 800; text-align: center; font-size: 1rem;
+            padding: 10px 24px; border: 1px dashed var(--warning); border-radius: 30px;
+        }
+        .msg-danger { color: var(--danger); border-color: var(--danger); background: rgba(244,63,94,0.1); }
 
-        .chat-input { display: flex; gap: 10px; }
-        .chat-input input { flex: 1; }
-        .chat-input button { width: auto; padding: 0 25px; }
+        /* Typing Indicator */
+        .typing-box {
+            display: none; align-self: flex-start; padding: 12px 18px;
+            background: rgba(255,255,255,0.1); border-radius: 20px; border-bottom-left-radius: 4px;
+        }
+        body.day-mode .typing-box { background: #fff; }
+        .dot {
+            display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+            background: var(--text-main); margin: 0 3px;
+            animation: typingBounce 1s infinite;
+        }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
 
-        .players-list { display: flex; gap: 10px; flex-wrap: wrap; }
-        .player-badge { padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; background: #f3f4f6; }
-        body.night-mode .player-badge { background: #374151; }
-        .player-dead { opacity: 0.5; text-decoration: line-through; color: var(--danger); }
+        /* Input Area */
+        .chat-input-area {
+            padding: 20px; background: rgba(0,0,0,0.2);
+            border-top: 1px solid var(--glass-border);
+            display: flex; gap: 16px;
+        }
+        body.day-mode .chat-input-area { background: rgba(255,255,255,0.5); }
+        
+        .chat-input-area input {
+            flex: 1; padding: 18px 24px; border-radius: var(--radius-xl);
+            border: 1px solid var(--glass-border); background: var(--glass-bg);
+            color: var(--text-main); font-family: 'Tajawal', sans-serif; font-size: 1.1rem;
+            transition: var(--transition-fast);
+        }
+        .chat-input-area input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-glow); outline: none; }
+        
+        .btn-send {
+            width: 60px; height: 60px; border-radius: 50%; border: none;
+            background: var(--primary); color: #fff; font-size: 1.4rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px var(--primary-glow); transition: var(--transition-fast);
+        }
+        .btn-send:hover { transform: scale(1.1); }
+
+        /* =========================================
+           [6] Modals, Overlays & Notifications
+           ========================================= */
+        .cinematic-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.9); z-index: 100;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            color: #fff;
+        }
+        .cinematic-overlay.active {
+            display: flex;
+            animation: cinematicOverlay 3s var(--ease-in-out-circ) forwards;
+        }
+        .cinematic-overlay h1 { font-size: 6rem; font-weight: 900; letter-spacing: -2px; margin-bottom: 20px; text-shadow: 0 0 30px currentColor; }
+        
+        /* Voting Panel Overlay */
+        .vote-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(10px);
+            z-index: 50; display: none; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: var(--radius-lg); opacity: 0; transform: scale(0.95);
+            transition: all 0.4s var(--ease-out-expo);
+        }
+        .vote-modal.active { display: flex; opacity: 1; transform: scale(1); }
+        .vote-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; width: 80%; max-width: 600px; margin-top: 30px; }
+        .vote-btn {
+            background: rgba(255,255,255,0.1); border: 1px solid var(--danger); padding: 20px; border-radius: var(--radius-md);
+            color: #fff; font-family: 'Tajawal', sans-serif; font-size: 1.2rem; font-weight: 700;
+            cursor: pointer; transition: var(--transition-fast);
+        }
+        .vote-btn:hover { background: var(--danger); box-shadow: 0 0 20px var(--danger-glow); transform: translate3d(0,-5px,0); }
+
+        /* Toast Notifications */
+        .toast-container { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 12px; pointer-events: none; }
+        .toast {
+            padding: 16px 32px; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px);
+            color: #fff; border-radius: 50px; font-weight: 700; font-size: 1.1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+            animation: fadeInUp 0.4s var(--ease-out-expo) forwards;
+        }
+
     </style>
 </head>
 <body>
 
-    <!-- شاشة الدخول (Lobby) -->
-    <div class="container" id="loginScreen">
-        <h1>المافيا 🕵️‍♂️</h1>
-        <p style="text-align: center; color: var(--text-muted);">أدخل بياناتك للاتصال بالغرفة وتوليد البوتات</p>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Cinematic Phase Transitions Overlay -->
+    <div class="cinematic-overlay" id="cinematicOverlay">
+        <i id="cinematicIcon" class="fa-solid fa-sun" style="font-size: 5rem; margin-bottom: 20px;"></i>
+        <h1 id="cinematicText">النهار</h1>
+    </div>
+
+    <div class="app-container">
         
-        <div class="input-group">
-            <label>مفتاح Gemini API (للبوتات):</label>
-            <input type="password" id="apiKey" placeholder="AI.. أدخل مفتاحك هنا لتشغيل الـ">
-        </div>
+        <!-- ================= Login Screen ================= -->
+        <div id="loginScreen" class="screen active">
+            <div class="login-card glass-panel">
+                <div class="brand">
+                    <i class="fa-solid fa-user-secret"></i>
+                    <h1>المافيا الذكية</h1>
+                    <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 10px;">نظام لعب متكامل بدقة 120fps</p>
+                </div>
+                
+                <div class="input-group">
+                    <label><i class="fa-solid fa-key"></i> مفتاح Gemini API (للمضيف فقط)</label>
+                    <input type="password" id="apiKey" placeholder="ادخل المفتاح لتفعيل الذكاء الاصطناعي..." autocomplete="off">
+                </div>
 
-        <div class="input-group">
-            <label>اسم اللاعب:</label>
-            <input type="text" id="playerName" placeholder="اكتب اسمك...">
-        </div>
+                <div class="input-group">
+                    <label><i class="fa-solid fa-user"></i> اسم اللاعب</label>
+                    <input type="text" id="playerName" placeholder="أدخل اسمك..." autocomplete="off">
+                </div>
 
-        <div class="input-group">
-            <label>رقم الغرفة:</label>
-            <input type="number" id="roomCode" placeholder="مثال: 99">
-        </div>
+                <div class="input-group">
+                    <label><i class="fa-solid fa-door-open"></i> رقم الغرفة</label>
+                    <input type="number" id="roomCode" placeholder="مثال: 777" autocomplete="off">
+                </div>
 
-        <button class="btn" onclick="joinLobby()">دخول الغرفة 🚀</button>
-    </div>
-
-    <!-- شاشة اللعبة -->
-    <div class="container" id="gameScreen">
-        <div class="header-bar">
-            <div>
-                <span style="font-weight: bold; font-size: 1.2rem;" id="uiPhase">☀️ النهار</span>
-                <div style="font-size: 0.9rem; opacity: 0.8;" id="uiRole">دورك: جاري التوزيع...</div>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="GameApp.joinLobby()">
+                    <i class="fa-solid fa-sign-in-alt"></i> الدخول إلى القرية
+                </button>
             </div>
-            <button class="btn btn-danger" style="width: auto; padding: 8px 15px; font-size: 0.9rem;" onclick="hostStartGame()" id="startBtn">بدء اللعبة (توليد البوتات)</button>
         </div>
 
-        <div class="players-list" id="playersListUI">
-            <!-- قائمة اللاعبين تظهر هنا -->
-        </div>
+        <!-- ================= Game Screen ================= -->
+        <div id="gameScreen" class="screen">
+            <div class="game-layout">
+                
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <!-- 3D Role Card -->
+                    <div class="role-scene" onclick="this.querySelector('.role-card').classList.toggle('is-flipped')">
+                        <div class="role-card" id="roleCard">
+                            <div class="role-face role-front">
+                                <i class="fa-solid fa-fingerprint" style="font-size: 4rem; color: var(--primary); margin-bottom: 15px;"></i>
+                                <h3 style="font-weight: 800; font-size: 1.4rem;">الهوية السرية</h3>
+                                <p style="opacity: 0.7; margin-top: 5px;">انقر للكشف</p>
+                            </div>
+                            <div class="role-face role-back" id="roleBackUI">
+                                <i class="fa-solid fa-user" id="roleIcon" style="font-size: 4rem; margin-bottom: 15px;"></i>
+                                <h2 id="roleTitle" style="font-weight: 900; font-size: 2rem; margin:0;">مدني</h2>
+                                <p id="roleDesc" style="font-weight: 500; font-size: 1rem; margin-top: 10px; opacity:0.9;">مهمتك كشف المافيا</p>
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="chat-box" id="chatBox">
-            <div class="message msg-system">مرحباً بك في الغرفة! بانتظار البقية...</div>
-        </div>
+                    <!-- Players Panel -->
+                    <div class="players-panel glass-panel">
+                        <div class="players-header">
+                            <i class="fa-solid fa-users"></i> سكان القرية (<span id="playersCountUI">0</span>)
+                        </div>
+                        <div class="players-list" id="playersListUI">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+                </div>
 
-        <div class="chat-input" id="actionArea">
-            <input type="text" id="chatInput" placeholder="اكتب رسالتك للقرية..." onkeypress="if(event.key === 'Enter') sendMessage()">
-            <button class="btn" onclick="sendMessage()">إرسال</button>
+                <!-- Main Arena -->
+                <div class="main-arena glass-panel">
+                    
+                    <div class="header-controls">
+                        <div class="phase-badge" id="phaseUI">
+                            <i class="fa-solid fa-hourglass-half" style="color: var(--info)"></i>
+                            <span>غرفة الانتظار</span>
+                        </div>
+                        <button class="btn btn-primary" id="startBtnUI" onclick="GameApp.hostStartGame()" style="padding: 12px 24px;">
+                            <i class="fa-solid fa-play"></i> بدء اللعبة
+                        </button>
+                    </div>
+
+                    <div class="chat-container">
+                        
+                        <!-- Voting Overlay -->
+                        <div class="vote-modal" id="voteModalUI">
+                            <h2 style="color: var(--danger); font-size: 2rem; font-weight: 900; margin-bottom: 10px;">
+                                <i class="fa-solid fa-gavel"></i> محكمة القرية
+                            </h2>
+                            <p style="font-size: 1.2rem; color: #fff;">اختر من تشتبه به لإعدامه</p>
+                            <div class="vote-grid" id="voteGridUI">
+                                <!-- Vote buttons injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages -->
+                        <div class="chat-messages" id="chatMessagesUI">
+                            <div class="msg-system">مرحباً بك في النظام. بانتظار اكتمال اللاعبين...</div>
+                        </div>
+
+                        <!-- Typing Indicator -->
+                        <div class="typing-box" id="typingUI">
+                            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                        </div>
+
+                        <!-- Input -->
+                        <div class="chat-input-area">
+                            <input type="text" id="chatInputUI" placeholder="اكتب رسالتك للقرية هنا..." onkeypress="if(event.key === 'Enter') GameApp.sendMessage()">
+                            <button class="btn-send" onclick="GameApp.sendMessage()">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
+    <!-- Socket.io -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- Application Logic -->
     <script>
-        const SERVER_URL = 'https://render-kr1o.onrender.com/';
-        let socket;
-        let myName, myRoom, apiKey;
-        let players = [];
-        let isHost = false; 
-        let phase = 'waiting'; // waiting, day, night
-        let myRole = 'مدني';
+        const GameApp = (() => {
+            // ==========================================
+            // Configuration & State
+            // ==========================================
+            const SERVER_URL = 'https://render-kr1o.onrender.com/';
+            const ROLES = {
+                'مافيا': { icon: 'fa-user-ninja', desc: 'اقتل سكان القرية ليلاً', color: '#f43f5e', bg: 'linear-gradient(135deg, #be123c, #881337)' },
+                'طبيب': { icon: 'fa-user-md', desc: 'احمِ شخصاً واحداً كل ليلة', color: '#3b82f6', bg: 'linear-gradient(135deg, #2563eb, #1e3a8a)' },
+                'محقق': { icon: 'fa-user-secret', desc: 'اكتشف دور شخص كل ليلة', color: '#8b5cf6', bg: 'linear-gradient(135deg, #7c3aed, #4c1d95)' },
+                'مدني': { icon: 'fa-user-shield', desc: 'ابحث عن المافيا وأعدمهم نهاراً', color: '#10b981', bg: 'linear-gradient(135deg, #059669, #064e3b)' }
+            };
 
-        // ==========================================
-        // 1. نظام الاتصال وإدارة السيرفر الوهمي
-        // ==========================================
-        function joinLobby() {
-            apiKey = document.getElementById('apiKey').value.trim();
-            myName = document.getElementById('playerName').value.trim();
-            myRoom = document.getElementById('roomCode').value.trim();
+            let socket = null;
+            let state = {
+                name: '', room: '', apiKey: '',
+                isHost: false, myRole: null, isAlive: true,
+                phase: 'lobby', dayCount: 1,
+                players: [] // {name, type: 'human'|'bot', alive: bool, role: string}
+            };
 
-            if (!myName || !myRoom) return alert("أدخل الاسم ورقم الغرفة!");
-
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('gameScreen').style.display = 'flex';
-
-            players.push({ name: myName, type: 'human', alive: true });
-            updatePlayersUI();
-
-            socket = io(SERVER_URL, { transports: ['websocket'], upgrade: false });
-
-            socket.on('connect', () => {
-                appendMessage('system', 'تم الاتصال بسيرفر الألعاب بنجاح ✔️');
-                // أول شخص يدخل الغرفة يعين نفسه "مضيف" لإدارة البوتات وحالة اللعبة
-                if(players.length === 1) isHost = true;
+            // ==========================================
+            // UI Controllers
+            // ==========================================
+            const UI = {
+                screens: { login: document.getElementById('loginScreen'), game: document.getElementById('gameScreen') },
+                chat: document.getElementById('chatMessagesUI'),
+                input: document.getElementById('chatInputUI'),
+                typing: document.getElementById('typingUI'),
+                playersList: document.getElementById('playersListUI'),
+                toastContainer: document.getElementById('toastContainer'),
                 
-                socket.emit('playerMoved', { type: 'join', room: myRoom, name: myName });
-            });
+                switchScreen(screenName) {
+                    Object.values(this.screens).forEach(s => s.classList.remove('active'));
+                    this.screens[screenName].classList.add('active');
+                },
 
-            socket.on('otherPlayerMoved', (data) => {
-                if (data.room !== myRoom) return;
+                showToast(msg, type = "info") {
+                    const t = document.createElement('div');
+                    t.className = 'toast';
+                    t.style.background = type === 'danger' ? 'rgba(244, 63, 94, 0.95)' : 'rgba(16, 185, 129, 0.95)';
+                    t.innerHTML = msg;
+                    this.toastContainer.appendChild(t);
+                    setTimeout(() => {
+                        t.style.animation = 'fadeInUp 0.4s var(--ease-out-expo) reverse forwards';
+                        setTimeout(() => t.remove(), 400);
+                    }, 3500);
+                },
 
-                if (data.type === 'join' && data.name !== myName) {
-                    if(!players.find(p => p.name === data.name)) {
-                        players.push({ name: data.name, type: 'human', alive: true });
-                        appendMessage('system', `انضم ${data.name} إلى الغرفة`);
-                        updatePlayersUI();
-                        // المضيف يرسل القائمة المحدثة
-                        if(isHost) socket.emit('playerMoved', { type: 'sync_players', room: myRoom, players: players });
-                    }
-                }
-                
-                if (data.type === 'sync_players' && !isHost) {
-                    players = data.players;
-                    updatePlayersUI();
-                }
-
-                if (data.type === 'chat') {
-                    appendMessage(data.name === myName ? 'me' : 'other', `${data.name}: ${data.message}`);
-                }
-
-                if (data.type === 'start_game') {
-                    phase = 'day';
-                    players = data.players; // تحديث مع البوتات
-                    let me = players.find(p => p.name === myName);
-                    myRole = me ? me.role : 'مراقب';
-                    document.getElementById('uiRole').innerText = `دورك السري: ${myRole}`;
-                    document.getElementById('startBtn').style.display = 'none';
-                    appendMessage('system', 'بدأت اللعبة! تم توزيع الأدوار سراً.');
-                    updatePlayersUI();
-                }
-
-                if (data.type === 'change_phase') {
-                    phase = data.phase;
-                    togglePhaseUI();
-                }
-            });
-        }
-
-        // ==========================================
-        // 2. إدارة حالة اللعبة (للمضيف فقط)
-        // ==========================================
-        async function hostStartGame() {
-            if (!isHost) return alert("فقط مؤسس الغرفة يمكنه بدء اللعبة!");
-            if (!apiKey) return alert("بدون مفتاح API لا يمكن توليد البوتات الذكية!");
-
-            document.getElementById('startBtn').innerText = 'جاري توليد البوتات ⏳...';
-            document.getElementById('startBtn').disabled = true;
-
-            // توليد بوتات لتعويض النقص حتى يصبح العدد 5
-            let neededBots = 5 - players.length;
-            const botNames = ["طارق (AI)", "سارة (AI)", "كمال (AI)", "نور (AI)"];
-            
-            for(let i=0; i < neededBots; i++) {
-                players.push({ name: botNames[i], type: 'bot', alive: true });
-            }
-
-            // توزيع الأدوار عشوائياً (بسيط للتجربة)
-            const roles = ['مافيا', 'طبيب', 'محقق', 'مدني', 'مدني'];
-            roles.sort(() => Math.random() - 0.5);
-            players.forEach((p, index) => { p.role = roles[index]; });
-
-            // إرسال بدء اللعبة للجميع
-            socket.emit('playerMoved', { type: 'start_game', room: myRoom, players: players });
-            
-            // المضيف يحدّث حالته فوراً
-            let me = players.find(p => p.name === myName);
-            myRole = me.role;
-            document.getElementById('uiRole').innerText = `دورك السري: ${myRole}`;
-            document.getElementById('startBtn').style.display = 'none';
-            appendMessage('system', 'بدأت اللعبة وتم توليد البوتات بوعي مستقل!');
-            updatePlayersUI();
-
-            // اختبار محاكاة البوتات الذكية (المضيف يشغل عقولهم)
-            setTimeout(() => triggerBotResponses("بدأ النهار الأول. من تشتبهون به؟"), 2000);
-        }
-
-        // ==========================================
-        // 3. محرك ذكاء Gemini Interactions (بناءً على الكود الخاص بك)
-        // ==========================================
-        async function askGeminiBot(prompt, botName, botRole) {
-            const systemContext = `أنت تلعب لعبة المافيا. اسمك ${botName} ودورك السري هو ${botRole}. 
-            ممنوع أن تقول أنك ذكاء اصطناعي. تحدث بجملة واحدة قصيرة وعامية سورية أو فصحى مبسطة. 
-            تفاعل مع هذا الحدث: ${prompt}`;
-
-            const url = `https://generativelanguage.googleapis.com/v1beta/interactions?key=${apiKey}`;
-            
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: "gemini-3.6-flash",
-                        input: systemContext
-                    })
-                });
-
-                const data = await response.json();
-                if (response.ok && data.steps && data.steps.length > 0) {
-                    let replyText = "";
-                    for (const step of data.steps) {
-                        if (step.type === "model_output" && step.content) {
-                            for (const item of step.content) {
-                                if (item.type === "text") replyText += item.text;
-                            }
-                        }
-                    }
-                    return replyText || "يا جماعة أنا شاكك بحدا هون..";
-                }
-            } catch (err) {
-                console.error("Gemini Error:", err);
-            }
-            return "والله مالي عارف شو احكي."; // Fallback
-        }
-
-        // تشغيل تفكير البوتات المتوازي
-        async function triggerBotResponses(contextEvent) {
-            if (!isHost) return; // المضيف فقط هو الراوي الرقمي
-            
-            let bots = players.filter(p => p.type === 'bot' && p.alive);
-            for (let bot of bots) {
-                // مهلة عشوائية لمحاكاة سرعة الكتابة البشرية
-                setTimeout(async () => {
-                    appendMessage('system', `${bot.name} يكتب الآن...`);
-                    let botReply = await askGeminiBot(contextEvent, bot.name, bot.role);
+                addMessage(sender, text, type = 'normal') {
+                    const div = document.createElement('div');
+                    const isMe = sender === state.name;
                     
-                    // إزالة رسالة "يكتب الآن" (بشكل مبسط نمسح آخر رسالة سيستم، يحتاج دقة أكبر في الإنتاج)
-                    const chatBox = document.getElementById('chatBox');
-                    if(chatBox.lastChild.innerText.includes("يكتب الآن")) chatBox.removeChild(chatBox.lastChild);
+                    if (type === 'system') {
+                        div.className = 'msg-system';
+                        div.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${text}`;
+                    } else if (type === 'danger') {
+                        div.className = 'msg-system msg-danger';
+                        div.innerHTML = `<i class="fa-solid fa-skull"></i> ${text}`;
+                    } else {
+                        div.className = `msg-bubble ${isMe ? 'msg-me' : 'msg-other'}`;
+                        div.innerHTML = `<span class="msg-meta">${sender} ${isMe ? '(أنت)' : ''}</span>${text}`;
+                    }
+                    
+                    this.chat.appendChild(div);
+                    this.chat.scrollTop = this.chat.scrollHeight; // Auto-scroll
+                },
 
-                    // إرسال رد البوت للسيرفر
-                    socket.emit('playerMoved', { type: 'chat', room: myRoom, name: bot.name, message: botReply });
-                }, Math.random() * 5000 + 2000);
-            }
-        }
+                updatePlayers() {
+                    this.playersList.innerHTML = '';
+                    document.getElementById('playersCountUI').innerText = state.players.length;
+                    
+                    state.players.forEach((p, idx) => {
+                        const div = document.createElement('div');
+                        div.className = `player-item ${p.alive ? '' : 'is-dead'}`;
+                        div.style.animationDelay = `${idx * 0.05}s`;
+                        
+                        const icon = p.type === 'bot' ? '<i class="fa-solid fa-robot" style="color:var(--info)"></i>' : '<i class="fa-solid fa-user"></i>';
+                        const status = p.alive ? '<i class="fa-solid fa-heart-pulse" style="color:var(--primary)"></i>' : '<i class="fa-solid fa-skull" style="color:var(--danger)"></i>';
+                        
+                        div.innerHTML = `
+                            <div style="display:flex; align-items:center; gap:12px; font-weight:700; font-size:1.1rem;">
+                                ${icon} <span class="player-name">${p.name}</span>
+                            </div>
+                            <div>${status}</div>
+                        `;
+                        this.playersList.appendChild(div);
+                    });
+                },
 
-        // ==========================================
-        // 4. واجهة المستخدم والتحكم اللحظي
-        // ==========================================
-        function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const msg = input.value.trim();
-            if(!msg) return;
+                updateRoleCard() {
+                    if (!state.myRole) return;
+                    const config = ROLES[state.myRole];
+                    const back = document.getElementById('roleBackUI');
+                    back.style.background = config.bg;
+                    document.getElementById('roleIcon').className = `fa-solid ${config.icon}`;
+                    document.getElementById('roleTitle').innerText = state.myRole;
+                    document.getElementById('roleDesc').innerText = config.desc;
+                    
+                    // Auto flip for 4 seconds
+                    const card = document.getElementById('roleCard');
+                    setTimeout(() => card.classList.add('is-flipped'), 1000);
+                    setTimeout(() => card.classList.remove('is-flipped'), 5000);
+                },
 
-            socket.emit('playerMoved', { type: 'chat', room: myRoom, name: myName, message: msg });
-            input.value = '';
+                triggerCinematic(phase) {
+                    const overlay = document.getElementById('cinematicOverlay');
+                    const icon = document.getElementById('cinematicIcon');
+                    const text = document.getElementById('cinematicText');
+                    
+                    overlay.classList.remove('active');
+                    void overlay.offsetWidth; // Trigger reflow
+                    
+                    if (phase === 'day') {
+                        overlay.style.background = 'rgba(255, 255, 255, 0.9)';
+                        overlay.style.color = '#000';
+                        icon.className = 'fa-solid fa-sun';
+                        icon.style.color = '#f59e0b';
+                        text.innerText = `النهار ${state.dayCount}`;
+                    } else if (phase === 'night') {
+                        overlay.style.background = 'rgba(15, 23, 42, 0.95)';
+                        overlay.style.color = '#fff';
+                        icon.className = 'fa-solid fa-moon';
+                        icon.style.color = '#60a5fa';
+                        text.innerText = `الليل ${state.dayCount}`;
+                    } else if (phase === 'voting') {
+                        overlay.style.background = 'rgba(136, 19, 55, 0.95)';
+                        overlay.style.color = '#fff';
+                        icon.className = 'fa-solid fa-gavel';
+                        icon.style.color = '#f43f5e';
+                        text.innerText = "وقت التصويت";
+                    }
+                    
+                    overlay.classList.add('active');
+                },
 
-            // إذا أنا المضيف، أجعل البوتات ترد على رسالتي
-            if(isHost) {
-                triggerBotResponses(`اللاعب ${myName} يقول: "${msg}". ماذا ترد عليه؟`);
-            }
-        }
+                setPhaseUI(phase) {
+                    state.phase = phase;
+                    const badge = document.getElementById('phaseUI');
+                    const voteModal = document.getElementById('voteModalUI');
+                    
+                    if (phase === 'day') {
+                        document.body.classList.add('day-mode');
+                        badge.innerHTML = `<i class="fa-solid fa-sun" style="color:#f59e0b"></i><span>نهار (اليوم ${state.dayCount})</span>`;
+                        voteModal.classList.remove('active');
+                        this.input.disabled = !state.isAlive;
+                        this.input.placeholder = state.isAlive ? "تحدث مع القرية..." : "أنت ميت... لا يمكنك التحدث";
+                        this.triggerCinematic('day');
+                    } 
+                    else if (phase === 'night') {
+                        document.body.classList.remove('day-mode');
+                        badge.innerHTML = `<i class="fa-solid fa-moon" style="color:#60a5fa"></i><span>ليل عميق</span>`;
+                        voteModal.classList.remove('active');
+                        this.input.disabled = true;
+                        this.input.placeholder = "الجميع نائمون...";
+                        this.triggerCinematic('night');
+                    }
+                    else if (phase === 'voting') {
+                        badge.innerHTML = `<i class="fa-solid fa-gavel" style="color:var(--danger)"></i><span style="color:var(--danger)">تصويت المحكمة</span>`;
+                        this.input.disabled = true;
+                        this.triggerCinematic('voting');
+                        setTimeout(() => this.buildVotingUI(), 3000); // Show modal after cinematic
+                    }
+                },
 
-        function appendMessage(type, text) {
-            const box = document.getElementById('chatBox');
-            const div = document.createElement('div');
-            div.className = `message msg-${type}`;
-            div.innerText = text;
-            box.appendChild(div);
-            box.scrollTop = box.scrollHeight;
-        }
+                buildVotingUI() {
+                    if (!state.isAlive) return;
+                    const grid = document.getElementById('voteGridUI');
+                    grid.innerHTML = '';
+                    
+                    const alivePlayers = state.players.filter(p => p.alive && p.name !== state.name);
+                    alivePlayers.forEach(p => {
+                        const btn = document.createElement('button');
+                        btn.className = 'vote-btn';
+                        btn.innerHTML = `<i class="fa-solid fa-user-slash"></i> إعدام ${p.name}`;
+                        btn.onclick = () => {
+                            this.addMessage('النظام', `لقد قمت بالتصويت ضد ${p.name}`, 'system');
+                            document.getElementById('voteModalUI').classList.remove('active');
+                            // Emulate sending vote to server
+                            socket.emit('playerMoved', { type: 'vote', room: state.room, voter: state.name, target: p.name });
+                        };
+                        grid.appendChild(btn);
+                    });
+                    
+                    // Skip button
+                    const skip = document.createElement('button');
+                    skip.className = 'vote-btn';
+                    skip.style.borderColor = 'var(--text-muted)';
+                    skip.innerHTML = `<i class="fa-solid fa-forward"></i> تخطي التصويت`;
+                    skip.onclick = () => document.getElementById('voteModalUI').classList.remove('active');
+                    grid.appendChild(skip);
 
-        function updatePlayersUI() {
-            const list = document.getElementById('playersListUI');
-            list.innerHTML = '';
-            players.forEach(p => {
-                let span = document.createElement('span');
-                span.className = `player-badge ${p.alive ? '' : 'player-dead'}`;
-                span.innerText = p.name;
-                list.appendChild(span);
-            });
-        }
+                    document.getElementById('voteModalUI').classList.add('active');
+                }
+            };
 
-        // تبديل الليل والنهار تجريبياً (لإظهار قوة الواجهة)
-        function togglePhaseUI() {
-            if (phase === 'night') {
-                document.body.classList.add('night-mode');
-                document.getElementById('uiPhase').innerText = '🌙 الليل';
-                appendMessage('system', 'حل الظلام.. المافيا تستيقظ 🤫');
-            } else {
-                document.body.classList.remove('night-mode');
-                document.getElementById('uiPhase').innerText = '☀️ النهار';
-                appendMessage('system', 'أشرقت الشمس.. وقت النقاش!');
-            }
-        }
+            // ==========================================
+            // Networking & Socket Logic
+            // ==========================================
+            const Network = {
+                init() {
+                    socket = io(SERVER_URL, { transports: ['websocket'], upgrade: false });
+                    
+                    socket.on('connect', () => {
+                        UI.showToast('تم الاتصال بالسيرفر بنجاح', 'success');
+                        if (state.players.length === 1) state.isHost = true;
+                        socket.emit('playerMoved', { type: 'join', room: state.room, name: state.name });
+                        
+                        if (state.isHost) document.getElementById('startBtnUI').style.display = 'inline-flex';
+                        else document.getElementById('startBtnUI').style.display = 'none';
+                    });
 
-        // أوامر للمضيف لاختبار الليل والنهار
-        window.switchDayNight = () => {
-            if(!isHost) return;
-            let newPhase = phase === 'day' ? 'night' : 'day';
-            socket.emit('playerMoved', { type: 'change_phase', room: myRoom, phase: newPhase });
-        }
+                    socket.on('otherPlayerMoved', (data) => this.handleEvents(data));
+                },
+
+                handleEvents(data) {
+                    if (data.room !== state.room) return;
+
+                    switch(data.type) {
+                        case 'join':
+                            if (data.name !== state.name && !state.players.find(p => p.name === data.name)) {
+                                state.players.push({ name: data.name, type: 'human', alive: true, role: null });
+                                UI.addMessage('النظام', `انضم اللاعب ${data.name} إلى القرية`, 'system');
+                                UI.updatePlayers();
+                                if (state.isHost) this.syncState();
+                            }
+                            break;
+
+                        case 'sync_state':
+                            if (!state.isHost) {
+                                state.players = data.players;
+                                UI.updatePlayers();
+                            }
+                            break;
+
+                        case 'chat':
+                            UI.addMessage(data.name, data.message);
+                            break;
+
+                        case 'game_start':
+                            state.players = data.players;
+                            const me = state.players.find(p => p.name === state.name);
+                            if (me) {
+                                state.myRole = me.role;
+                                UI.updateRoleCard();
+                            }
+                            document.getElementById('startBtnUI').style.display = 'none';
+                            UI.addMessage('النظام', 'بدأت اللعبة! تم توزيع الأدوار.', 'system');
+                            UI.updatePlayers();
+                            break;
+
+                        case 'phase_change':
+                            UI.addMessage('النظام', data.msg, 'system');
+                            UI.setPhaseUI(data.phase);
+                            break;
+
+                        case 'player_killed':
+                            const victim = state.players.find(p => p.name === data.target);
+                            if (victim) {
+                                victim.alive = false;
+                                if (victim.name === state.name) state.isAlive = false;
+                            }
+                            UI.addMessage('النظام', `تم العثور على جثة ${data.target} هذا الصباح!`, 'danger');
+                            UI.updatePlayers();
+                            break;
+                    }
+                },
+
+                syncState() {
+                    socket.emit('playerMoved', { type: 'sync_state', room: state.room, players: state.players });
+                }
+            };
+
+            // ==========================================
+            // Game Master (Host & AI AI Logic)
+            // ==========================================
+            const Host = {
+                async startGame() {
+                    if (!state.isHost) return;
+                    if (!state.apiKey) return UI.showToast('مطلوب مفتاح API لتوليد البوتات', 'danger');
+
+                    const btn = document.getElementById('startBtnUI');
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التوليد...';
+                    btn.style.pointerEvents = 'none';
+
+                    // Generate Bots
+                    const botNames = ["آدم (AI)", "سارة (AI)", "زين (AI)", "ليلى (AI)"];
+                    const needed = Math.max(0, 5 - state.players.length);
+                    
+                    for(let i=0; i<needed; i++) {
+                        state.players.push({ name: botNames[i], type: 'bot', alive: true, role: null });
+                    }
+
+                    // Assign Roles randomly
+                    const rolesPool = ['مافيا', 'طبيب', 'محقق', 'مدني', 'مدني', 'مدني', 'مافيا'];
+                    const gameRoles = rolesPool.slice(0, state.players.length).sort(() => Math.random() - 0.5);
+                    
+                    state.players.forEach((p, i) => p.role = gameRoles[i]);
+
+                    // Start Game broadcast
+                    socket.emit('playerMoved', { type: 'game_start', room: state.room, players: state.players });
+                    
+                    // Local Host Setup
+                    state.myRole = state.players.find(p => p.name === state.name).role;
+                    UI.updateRoleCard();
+                    btn.style.display = 'none';
+
+                    // Start Loop
+                    setTimeout(() => this.setPhase('day', `استيقظت القرية في اليوم ${state.dayCount}`), 2000);
+                },
+
+                setPhase(phase, msg) {
+                    if (!state.isHost) return;
+                    socket.emit('playerMoved', { type: 'phase_change', room: state.room, phase, msg });
+                    
+                    if (phase === 'day') {
+                        setTimeout(() => this.triggerAIBots(`بدأ النهار ${state.dayCount}. من تشتبهون به؟`), 3000);
+                        setTimeout(() => this.setPhase('voting', 'حان وقت التصويت العلني!'), 30000); // 30s Day
+                    } 
+                    else if (phase === 'voting') {
+                        setTimeout(() => this.triggerAIBots(`صوتوا الآن ضد المشتبه به.`), 1500);
+                        setTimeout(() => this.setPhase('night', 'حل الظلام على القرية...'), 15000); // 15s Vote
+                    }
+                    else if (phase === 'night') {
+                        setTimeout(() => this.simulateNightBots(), 4000);
+                    }
+                },
+
+                async triggerAIBots(context) {
+                    const aliveBots = state.players.filter(p => p.type === 'bot' && p.alive);
+                    
+                    for (let i = 0; i < aliveBots.length; i++) {
+                        const bot = aliveBots[i];
+                        setTimeout(async () => {
+                            UI.typing.style.display = 'inline-block';
+                            const response = await this.askGemini(context, bot.name, bot.role);
+                            UI.typing.style.display = 'none';
+                            socket.emit('playerMoved', { type: 'chat', room: state.room, name: bot.name, message: response });
+                        }, Math.random() * 3000 + (i * 2500));
+                    }
+                },
+
+                async askGemini(prompt, name, role) {
+                    const systemMsg = `أنت تلعب المافيا. اسمك ${name} ودورك ${role}. 
+                    تحدث كلاعب بشري محترف بجملة واحدة فقط باللهجة السورية أو الفصحى المبسطة. 
+                    الحدث: ${prompt}`;
+                    
+                    try {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.apiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: systemMsg }] }] })
+                        });
+                        const data = await res.json();
+                        return data.candidates[0].content.parts[0].text.trim();
+                    } catch (e) {
+                        return "أنا أراقب الوضع بصمت...";
+                    }
+                },
+
+                simulateNightBots() {
+                    const mafiaBots = state.players.filter(p => p.type === 'bot' && p.role === 'مافيا' && p.alive);
+                    const targets = state.players.filter(p => p.alive && p.role !== 'مافيا');
+                    
+                    if (mafiaBots.length > 0 && targets.length > 0) {
+                        const victim = targets[Math.floor(Math.random() * targets.length)];
+                        setTimeout(() => {
+                            socket.emit('playerMoved', { type: 'player_killed', room: state.room, target: victim.name });
+                            state.dayCount++;
+                            setTimeout(() => this.setPhase('day', 'أشرقت الشمس على فاجعة جديدة...'), 4000);
+                        }, 5000);
+                    } else {
+                        setTimeout(() => this.setPhase('day', 'مر الليل بسلام ولم يمت أحد.'), 5000);
+                    }
+                }
+            };
+
+            // ==========================================
+            // Public API
+            // ==========================================
+            return {
+                joinLobby() {
+                    state.name = document.getElementById('playerName').value.trim();
+                    state.room = document.getElementById('roomCode').value.trim();
+                    state.apiKey = document.getElementById('apiKey').value.trim();
+
+                    if (!state.name || !state.room) return UI.showToast("الرجاء إدخال الاسم ورقم الغرفة", "danger");
+
+                    state.players.push({ name: state.name, type: 'human', alive: true, role: null });
+                    UI.updatePlayers();
+                    UI.switchScreen('game');
+                    Network.init();
+                },
+                
+                hostStartGame: () => Host.startGame(),
+                
+                sendMessage() {
+                    const val = UI.input.value.trim();
+                    if (!val) return;
+                    if (!state.isAlive) return UI.showToast("أنت ميت، لا يمكنك التحدث!", "danger");
+                    
+                    socket.emit('playerMoved', { type: 'chat', room: state.room, name: state.name, message: val });
+                    UI.input.value = '';
+
+                    if (state.isHost) Host.triggerAIBots(`اللاعب ${state.name} يقول: ${val}`);
+                }
+            };
+        })();
     </script>
 </body>
 </html>
