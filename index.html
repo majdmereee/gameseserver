@@ -3,406 +3,477 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mafia AI - المافيا الذكية</title>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <title>Dark Breakers - Minecraft Style</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #10b981; --primary-glow: rgba(16, 185, 129, 0.5);
-            --danger: #f43f5e; --danger-glow: rgba(244, 63, 94, 0.5);
-            --info: #3b82f6; --info-glow: rgba(59, 130, 246, 0.5);
-            --warning: #f59e0b;
-            --bg-night: linear-gradient(135deg, #020617, #0f172a, #1e1b4b);
-            --bg-day: linear-gradient(135deg, #e0f2fe, #f0f9ff, #fed7aa);
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --ease-fluid: cubic-bezier(0.16, 1, 0.3, 1);
+            --bg-base: #111;
+            --bg-panel: rgba(15, 23, 42, 0.9);
+            --color-text: #fff;
+            --color-primary: #3b82f6;
+            --color-success: #10b981;
+            --color-danger: #f43f5e;
+            --color-warning: #f59e0b;
         }
 
-        body.day-mode {
-            --glass-bg: rgba(255, 255, 255, 0.5);
-            --glass-border: rgba(255, 255, 255, 0.3);
-            --text-main: #0f172a;
-            --text-muted: #475569;
-            background: var(--bg-day);
-        }
-
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         
         body {
             font-family: 'Tajawal', sans-serif;
-            background: var(--bg-night);
-            color: var(--text-main);
-            min-height: 100vh; overflow: hidden;
-            transition: background 2s var(--ease-fluid), color 1s ease;
-            display: flex; align-items: center; justify-content: center;
+            background: var(--bg-base);
+            color: var(--color-text);
+            width: 100vw; height: 100vh;
+            overflow: hidden; touch-action: none;
         }
 
-        /* Live Particles Background */
-        #particles {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
-            opacity: 0.4; transition: opacity 2s var(--ease-fluid);
+        #app-core { width: 100%; height: 100%; position: relative; }
+
+        .overlay-screen {
+            position: absolute; inset: 0; z-index: 100;
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; transition: opacity 0.4s ease;
+        }
+        .hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+
+        .panel {
+            background: var(--bg-panel); border: 2px solid #333;
+            padding: 30px 20px; border-radius: 16px; width: 100%; max-width: 400px;
+            display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
 
-        .app-container { width: 100%; height: 100vh; max-width: 1400px; position: relative; z-index: 1; perspective: 1200px; }
+        .brand-title { text-align: center; font-size: 2.2rem; font-weight: 900; color: var(--color-success); text-shadow: 2px 2px 0 #000; }
         
-        .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0; visibility: hidden;
-            transform: translate3d(0, 30px, 0) scale(0.95);
-            transition: all 0.7s var(--ease-fluid);
-            padding: 20px; display: flex; flex-direction: column;
-        }
-        .screen.active { opacity: 1; visibility: visible; transform: translate3d(0, 0, 0) scale(1); z-index: 10; }
-
-        .glass-panel {
-            background: var(--glass-bg); backdrop-filter: blur(25px) saturate(200%);
-            -webkit-backdrop-filter: blur(25px) saturate(200%);
-            border: 1px solid var(--glass-border); border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2); transform: translateZ(0);
-        }
-
-        .btn {
-            font-family: inherit; font-weight: 800; font-size: 1.1rem; padding: 16px 32px;
-            border: none; border-radius: 16px; cursor: pointer;
-            display: inline-flex; align-items: center; justify-content: center; gap: 12px;
-            transition: 0.3s var(--ease-fluid); position: relative; overflow: hidden;
-        }
-        .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 8px 25px var(--primary-glow); }
-        .btn-primary:hover { transform: translateY(-4px); box-shadow: 0 12px 35px var(--primary-glow); }
-        .btn-danger { background: var(--danger); color: #fff; box-shadow: 0 8px 25px var(--danger-glow); }
-        .btn-danger:hover { transform: translateY(-4px); box-shadow: 0 12px 35px var(--danger-glow); }
-
-        .input-group { position: relative; margin-bottom: 24px; }
-        .input-group label { display: block; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        .input-group label { font-weight: 700; color: #ccc; }
         .input-group input {
-            width: 100%; padding: 18px 24px; background: rgba(0,0,0,0.2);
-            border: 2px solid var(--glass-border); border-radius: 16px;
-            color: inherit; font-family: inherit; font-size: 1.1rem; font-weight: 600;
-            transition: 0.3s var(--ease-fluid);
+            padding: 15px; border-radius: 8px; background: #000; border: 2px solid #444; 
+            color: #fff; font-family: inherit; font-size: 1.1rem; text-align: center;
         }
-        body.day-mode .input-group input { background: rgba(255,255,255,0.7); }
-        .input-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-glow); outline: none; }
+        .input-group input:focus { border-color: var(--color-success); outline: none; }
 
-        /* Layout */
-        #loginScreen { align-items: center; justify-content: center; }
-        .login-card { width: 100%; max-width: 480px; padding: 40px; }
-        .game-layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; height: calc(100vh - 40px); }
-        @media (max-width: 1024px) { .game-layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } .sidebar { max-height: 40vh; } }
-
-        /* Role Card */
-        .sidebar { display: flex; flex-direction: column; gap: 24px; }
-        .role-scene { height: 200px; perspective: 1200px; cursor: pointer; }
-        .role-card { width: 100%; height: 100%; position: relative; transition: transform 0.8s var(--ease-fluid); transform-style: preserve-3d; border-radius: 24px; }
-        .role-card.is-flipped { transform: rotateY(180deg); }
-        .role-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 24px; border: 1px solid var(--glass-border); }
-        .role-front { background: rgba(30, 41, 59, 0.8); }
-        .role-back { transform: rotateY(180deg); background: var(--primary); color: #fff; }
-
-        /* Players */
-        .players-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 20px; }
-        .players-list { flex: 1; overflow-y: auto; scrollbar-width: none; }
-        .player-item {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 14px 18px; margin-bottom: 10px; background: rgba(0,0,0,0.15);
-            border-radius: 16px; border: 1px solid transparent; transition: 0.3s;
+        .action-area { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        
+        .btn {
+            padding: 15px; border: none; border-radius: 8px; font-family: inherit; font-weight: 900; font-size: 1.1rem;
+            cursor: pointer; color: #fff; display: flex; justify-content: center; align-items: center; gap: 10px;
+            text-transform: uppercase; letter-spacing: 1px;
         }
-        body.day-mode .player-item { background: rgba(255,255,255,0.4); }
-        .player-item.is-dead { opacity: 0.5; filter: grayscale(1); background: rgba(244, 63, 94, 0.1); border-color: var(--danger-glow); text-decoration: line-through; }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--color-primary); }
+        .btn-warning { background: var(--color-warning); color: #000; }
+        .btn-success { background: var(--color-success); }
+        .btn-danger { background: var(--color-danger); }
 
-        /* Chat */
-        .main-arena { display: flex; flex-direction: column; gap: 24px; overflow: hidden; }
-        .header-controls { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; }
-        .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 18px; scroll-behavior: smooth; }
+        #game-canvas { position: absolute; inset: 0; z-index: 1; image-rendering: pixelated; }
         
-        .msg-bubble { max-width: 80%; padding: 16px 20px; border-radius: 20px; font-size: 1.1rem; line-height: 1.6; font-weight: 500; animation: fadeInUp 0.4s var(--ease-fluid) forwards; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .msg-meta { font-size: 0.85rem; font-weight: 800; opacity: 0.7; margin-bottom: 6px; display: block; }
-        .msg-me { background: var(--primary); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px var(--primary-glow); }
-        .msg-other { background: rgba(255,255,255,0.1); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
-        body.day-mode .msg-other { background: #fff; }
-        .msg-system { align-self: center; color: var(--warning); font-weight: 800; padding: 10px 24px; border: 1px dashed var(--warning); border-radius: 30px; }
+        #hud-layer { position: absolute; top: 0; left: 0; right: 0; z-index: 10; pointer-events: none; display: flex; justify-content: space-between; padding: 15px; }
+        .hud-panel { pointer-events: auto; background: rgba(0, 0, 0, 0.7); padding: 10px 20px; border-radius: 8px; border: 2px solid #333; }
         
-        .chat-input-area { padding: 20px; background: rgba(0,0,0,0.2); border-top: 1px solid var(--glass-border); display: flex; gap: 16px; }
-        body.day-mode .chat-input-area { background: rgba(255,255,255,0.5); }
-        .chat-input-area input { flex: 1; padding: 18px 24px; border-radius: 24px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: inherit; font-family: inherit; font-size: 1.1rem; }
-        .btn-send { width: 60px; height: 60px; border-radius: 50%; border: none; background: var(--primary); color: #fff; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px var(--primary-glow); transition: 0.2s; }
-        
-        /* Overlays */
-        .cinematic-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9);
-            z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; color: #fff;
+        #draw-overlay { position: absolute; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.95); display: flex; flex-direction: column; padding: 20px; align-items: center; justify-content: center; }
+        #drawing-board { background: #fff; border-radius: 4px; box-shadow: 0 0 0 4px #444; width: 100%; height: 50vh; max-height: 400px; touch-action: none; margin: 20px 0; }
+        .draw-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+
+        /* Joysticks مخصصة للواجهة الطولية */
+        .joysticks-wrapper { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+        .joystick-zone { 
+            position: absolute; bottom: 40px; width: 120px; height: 120px; 
+            border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); 
+            pointer-events: auto; touch-action: none; display: flex; justify-content: center; align-items: center; 
         }
-        .cinematic-overlay.active { display: flex; animation: cinematicOverlay 3.5s var(--ease-fluid) forwards; }
-        @keyframes cinematicOverlay { 0% { opacity: 0; filter: blur(10px); transform: scale(1.1); } 15% { opacity: 1; filter: blur(0); transform: scale(1); } 85% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.95); pointer-events: none; } }
-        
-        .vote-modal {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); z-index: 50; display: none;
-            flex-direction: column; align-items: center; justify-content: center; border-radius: 24px;
-            opacity: 0; transform: scale(0.95); transition: all 0.5s var(--ease-fluid);
+        #joystick-left { left: 20px; } 
+        #joystick-right { right: 20px; }
+        .joystick-knob { width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.6); position: absolute; pointer-events: none; }
+
+        /* Crosshair */
+        .crosshair {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 20px; height: 20px; pointer-events: none; z-index: 10;
         }
-        .vote-modal.active { display: flex; opacity: 1; transform: scale(1); }
-        .vote-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; width: 80%; margin-top: 30px; }
-        .vote-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--danger); padding: 20px; border-radius: 16px; color: #fff; font-family: inherit; font-size: 1.2rem; font-weight: 700; cursor: pointer; transition: 0.3s; }
-        .vote-btn:hover { background: var(--danger); box-shadow: 0 0 25px var(--danger-glow); transform: translateY(-5px); }
+        .crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(255,255,255,0.8); }
+        .crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
+        .crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
     </style>
 </head>
 <body>
-    <canvas id="particles"></canvas>
-    <div class="toast-container" id="toastContainer" style="position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:1000;"></div>
 
-    <div class="cinematic-overlay" id="cinematicOverlay">
-        <i id="cinematicIcon" class="fa-solid fa-sun" style="font-size: 6rem; margin-bottom: 20px;"></i>
-        <h1 id="cinematicText" style="font-size: 5rem; font-weight: 900;">النهار</h1>
-    </div>
+    <div id="app-core">
+        <canvas id="game-canvas"></canvas>
+        <div class="crosshair" id="crosshair" style="display: none;"></div>
+        
+        <div id="joysticks-container" class="joysticks-wrapper hidden">
+            <div id="joystick-left" class="joystick-zone"><div class="joystick-knob" id="knob-left"></div></div>
+            <div id="joystick-right" class="joystick-zone"><div class="joystick-knob" id="knob-right"></div></div>
+        </div>
 
-    <div class="app-container">
-        <!-- Login -->
-        <div id="loginScreen" class="screen active">
-            <div class="login-card glass-panel">
-                <div style="text-align:center; margin-bottom:40px;">
-                    <i class="fa-solid fa-mask" style="font-size: 4rem; color: var(--primary);"></i>
-                    <h1 style="font-size: 2.5rem; font-weight: 900; margin-top:10px;">المافيا الذكية</h1>
-                </div>
-                <div class="input-group">
-                    <label>مفتاح Gemini API (مطلوب لتشغيل الوعي)</label>
-                    <input type="password" id="apiKey" placeholder="AI Key...">
-                </div>
+        <div id="hud-layer" class="hidden">
+            <div class="hud-panel">
+                <h3 id="role-text" style="color: var(--color-success); font-size: 1.1rem; margin-bottom: 4px;">جاري التحميل...</h3>
+                <p id="task-text" style="font-size: 0.85rem; color: #aaa;">يرجى الانتظار</p>
+            </div>
+            <div>
+                <button id="btn-open-paper" class="btn btn-warning" style="pointer-events: auto; display: none; padding: 10px; font-size: 0.9rem;" onclick="DrawingEngine.open()">
+                    <i class="fa-solid fa-pen"></i> الرسم
+                </button>
+            </div>
+        </div>
+
+        <div id="draw-overlay" class="hidden">
+            <div style="background: #222; padding: 15px; border-radius: 8px; border: 2px solid #444; text-align: center; width: 100%;">
+                <h4 style="color: var(--color-success); margin-bottom: 5px;">تلميح النظام</h4>
+                <p id="system-hint-text" style="font-weight: 700; font-size: 1rem;">جاري التوليد...</p>
+            </div>
+            <canvas id="drawing-board"></canvas>
+            <div class="draw-controls">
+                <button class="btn btn-danger" onclick="DrawingEngine.clear()"><i class="fa-solid fa-eraser"></i> مسح</button>
+                <button class="btn btn-success" onclick="DrawingEngine.sendTo3DWorld()"><i class="fa-solid fa-paper-plane"></i> إرسال</button>
+                <button class="btn" style="background: #444; grid-column: span 2;" onclick="DrawingEngine.close()"><i class="fa-solid fa-xmark"></i> إغلاق</button>
+            </div>
+        </div>
+
+        <div id="setup-screen" class="overlay-screen">
+            <div class="panel">
+                <h1 class="brand-title">MINECRAFT<br><span style="color: #fff; font-size: 1.5rem;">Breakers</span></h1>
                 <div class="input-group">
                     <label>اسم اللاعب</label>
                     <input type="text" id="playerName" placeholder="أدخل اسمك...">
                 </div>
-                <button class="btn btn-primary" style="width: 100%" onclick="GameApp.joinLobby()">بدء اللعب</button>
+                <div class="input-group">
+                    <label>رقم الغرفة</label>
+                    <input type="number" id="roomCode" placeholder="مثال: 777">
+                </div>
+                <div class="action-area">
+                    <button class="btn btn-success" onclick="GameManager.bootstrap('drawer')">الرسّام <i class="fa-solid fa-pen"></i></button>
+                    <button class="btn btn-warning" onclick="GameManager.bootstrap('solver')">المهندس <i class="fa-solid fa-wrench"></i></button>
+                </div>
             </div>
         </div>
 
-        <!-- Game -->
-        <div id="gameScreen" class="screen">
-            <div class="game-layout">
-                <div class="sidebar">
-                    <div class="role-scene" onclick="this.querySelector('.role-card').classList.toggle('is-flipped')">
-                        <div class="role-card" id="roleCard">
-                            <div class="role-face role-front">
-                                <i class="fa-solid fa-fingerprint" style="font-size: 3.5rem; color: var(--primary);"></i>
-                                <h3 style="margin-top:15px;">بطاقة الهوية</h3>
-                            </div>
-                            <div class="role-face role-back" id="roleBackUI">
-                                <i id="roleIcon" class="fa-solid fa-user" style="font-size: 3.5rem;"></i>
-                                <h2 id="roleTitle" style="font-size: 2rem; margin:10px 0;">مدني</h2>
-                                <p id="roleDesc">العب بذكاء</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="players-panel glass-panel">
-                        <h3 style="margin-bottom:15px; border-bottom:1px solid var(--glass-border); padding-bottom:10px;">القرية</h3>
-                        <div class="players-list" id="playersListUI"></div>
-                    </div>
-                </div>
-
-                <div class="main-arena glass-panel">
-                    <div class="header-controls">
-                        <div id="phaseUI" style="font-size: 1.5rem; font-weight: 800; display:flex; gap:10px; align-items:center;">
-                            <i class="fa-solid fa-hourglass-half"></i> غرفة الانتظار
-                        </div>
-                        <button class="btn btn-primary" id="startBtnUI" onclick="GameApp.hostStartGame()">بدء اللعبة (توليد الذكاء)</button>
-                    </div>
-
-                    <div class="chat-container">
-                        <div class="vote-modal" id="voteModalUI">
-                            <h2 style="color:var(--danger); font-size:2.5rem; margin-bottom:20px;">المحكمة</h2>
-                            <div class="vote-grid" id="voteGridUI"></div>
-                        </div>
-                        <div class="chat-messages" id="chatMessagesUI"></div>
-                        <div class="chat-input-area">
-                            <input type="text" id="chatInputUI" placeholder="تحدث..." onkeypress="if(event.key === 'Enter') GameApp.sendMessage()">
-                            <button class="btn-send" onclick="GameApp.sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div id="loading-screen" class="overlay-screen hidden">
+            <i class="fa-solid fa-cube fa-spin" style="font-size: 4rem; color: var(--color-success); margin-bottom: 15px;"></i>
+            <h2 id="loading-text" style="font-weight: 900; text-shadow: 2px 2px 0 #000;">جاري بناء العالم...</h2>
         </div>
     </div>
 
-    <!-- Script Logic -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
     <script>
-        // Particles Animation Logic
-        const canvas = document.getElementById('particles');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-        const particlesArray = [];
-        class Particle {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 3 + 1;
-                this.speedY = Math.random() * -1 - 0.5;
+        const State = { player: { name: '', room: '', role: '' }, game: { solution: [false, false, false, false], current: [false, false, false, false] } };
+
+        const PuzzleSystem = {
+            generate() {
+                let newSolution = Array.from({length: 4}, () => Math.random() > 0.5);
+                if (!newSolution.includes(true)) newSolution[Math.floor(Math.random() * 4)] = true;
+                State.game.solution = newSolution;
+                let active = [];
+                newSolution.forEach((val, i) => { if(val) active.push(i + 1); });
+                document.getElementById('system-hint-text').innerText = `شغل القواطع: (${active.join(' و ')}). ارسم لغز للمهندس!`;
+                NetworkController.emit('sync_puzzle', { solution: newSolution });
+                setTimeout(() => GameManager.startGameplay(), 600);
             }
-            update() {
-                this.y += this.speedY;
-                if (this.y < 0) { this.y = canvas.height; this.x = Math.random() * canvas.width; }
-            }
-            draw() {
-                ctx.fillStyle = document.body.classList.contains('day-mode') ? 'rgba(245, 158, 11, 0.4)' : 'rgba(96, 165, 250, 0.4)';
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-            }
-        }
-        for(let i=0; i<70; i++) particlesArray.push(new Particle());
-        function animateParticles() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particlesArray.forEach(p => { p.update(); p.draw(); });
-            requestAnimationFrame(animateParticles);
-        }
-        animateParticles();
+        };
 
-        // System Core
-        const GameApp = (() => {
-            const BOT_PROFILES = {
-                "آدم (AI)": "شخصية هجومية وعصبية، يتهم الناس بسرعة، يتحدث بلهجة سورية حادة.",
-                "سارة (AI)": "هادئة جداً ومحللة، تحاول ربط الأحداث، كلامها قليل ومركز.",
-                "زين (AI)": "ساخر ومستفز، يضحك في المواقف الصعبة، لا يأخذ الأمور بجدية.",
-                "ليلى (AI)": "خائفة دائماً، تدافع عن نفسها وتشك بالجميع حتى لو لم يتهمها أحد.",
-                "عمر (AI)": "يدعي الحكمة، يتحدث بثقة زائدة وكأنه المحقق الفعلي."
-            };
-
-            const ROLES = {
-                'مافيا': { icon: 'fa-user-ninja', bg: 'linear-gradient(135deg, #be123c, #881337)' },
-                'طبيب': { icon: 'fa-user-md', bg: 'linear-gradient(135deg, #2563eb, #1e3a8a)' },
-                'محقق': { icon: 'fa-user-secret', bg: 'linear-gradient(135deg, #7c3aed, #4c1d95)' },
-                'مدني': { icon: 'fa-user-shield', bg: 'linear-gradient(135deg, #059669, #064e3b)' }
-            };
-
-            let state = {
-                name: '', apiKey: '', isHost: true, myRole: null, isAlive: true,
-                phase: 'lobby', dayCount: 1, players: [], chatHistory: []
-            };
-
-            const UI = {
-                addMsg(sender, text, type='normal') {
-                    const div = document.createElement('div');
-                    if (type === 'system') div.className = 'msg-system';
-                    else div.className = `msg-bubble ${sender === state.name ? 'msg-me' : 'msg-other'}`;
-                    
-                    div.innerHTML = type === 'system' ? text : `<span class="msg-meta">${sender}</span>${text}`;
-                    document.getElementById('chatMessagesUI').appendChild(div);
-                    div.scrollIntoView({behavior: 'smooth'});
-                    
-                    if(type === 'normal') state.chatHistory.push(`${sender}: ${text}`);
-                    if(state.chatHistory.length > 15) state.chatHistory.shift();
-                },
-                updatePlayers() {
-                    const list = document.getElementById('playersListUI');
-                    list.innerHTML = '';
-                    state.players.forEach(p => {
-                        list.innerHTML += `<div class="player-item ${p.alive?'':'is-dead'}">
-                            <span>${p.type==='bot'?'<i class="fa-solid fa-robot"></i>':'<i class="fa-solid fa-user"></i>'} ${p.name}</span>
-                        </div>`;
-                    });
-                },
-                setPhase(phase) {
-                    state.phase = phase;
-                    const overlay = document.getElementById('cinematicOverlay');
-                    overlay.classList.remove('active'); void overlay.offsetWidth;
-                    
-                    if (phase === 'day') {
-                        document.body.classList.add('day-mode');
-                        document.getElementById('cinematicIcon').className = 'fa-solid fa-sun text-warning';
-                        document.getElementById('cinematicText').innerText = `النهار ${state.dayCount}`;
-                        document.getElementById('phaseUI').innerHTML = '<i class="fa-solid fa-sun"></i> نهار';
-                    } else if (phase === 'night') {
-                        document.body.classList.remove('day-mode');
-                        document.getElementById('cinematicIcon').className = 'fa-solid fa-moon text-info';
-                        document.getElementById('cinematicText').innerText = `الليل ${state.dayCount}`;
-                        document.getElementById('phaseUI').innerHTML = '<i class="fa-solid fa-moon"></i> ليل';
-                    }
-                    overlay.classList.add('active');
+        const NetworkController = {
+            socket: null,
+            SERVER_URL: 'https://render-kr1o.onrender.com/',
+            init() {
+                try {
+                    this.socket = io(this.SERVER_URL, { transports: ['websocket'] });
+                    this.socket.on('connect', () => { State.player.role === 'drawer' ? PuzzleSystem.generate() : GameManager.startGameplay(); });
+                    this.socket.on('otherPlayerMoved', (data) => this.processIncoming(data));
+                } catch (e) { console.error(e); }
+            },
+            emit(type, payload) { if (this.socket?.connected) this.socket.emit('playerMoved', { type, room: State.player.room, ...payload }); },
+            processIncoming(data) {
+                if (data.room !== State.player.room) return;
+                switch (data.type) {
+                    case 'sync_puzzle': State.game.solution = data.solution; Graphics3D.resetBreakers(); break;
+                    case 'receive_drawing': Graphics3D.applyTextureToBoard(data.image); break;
+                    case 'breaker_toggle':
+                        if (State.player.role === 'drawer') return;
+                        State.game.current[data.index] = data.state;
+                        Graphics3D.animateBreaker(data.index, data.state);
+                        break;
+                    case 'win_game': GameManager.triggerWin(); break;
                 }
-            };
+            }
+        };
 
-            const Host = {
-                startGame() {
-                    if(!state.apiKey) return alert("أدخل مفتاح الـ API");
-                    const botNames = Object.keys(BOT_PROFILES);
-                    
-                    botNames.forEach(n => state.players.push({name: n, type: 'bot', alive: true}));
-                    const roles = ['مافيا', 'محقق', 'طبيب', 'مدني', 'مافيا', 'مدني'].sort(() => Math.random() - 0.5);
-                    state.players.forEach((p, i) => p.role = roles[i]);
-                    
-                    const me = state.players.find(p => p.name === state.name);
-                    state.myRole = me.role;
-                    document.getElementById('roleBackUI').style.background = ROLES[me.role].bg;
-                    document.getElementById('roleIcon').className = `fa-solid ${ROLES[me.role].icon}`;
-                    document.getElementById('roleTitle').innerText = me.role;
-                    
-                    document.getElementById('startBtnUI').style.display = 'none';
-                    UI.updatePlayers();
-                    UI.addMsg('النظام', 'بدأت اللعبة! تم توزيع الأدوار.', 'system');
-                    
-                    setTimeout(() => this.runDay(), 3000);
-                },
+        const DrawingEngine = {
+            canvas: null, ctx: null, isDrawing: false, lastX: 0, lastY: 0,
+            init() {
+                this.canvas = document.getElementById('drawing-board');
+                this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+                this.resizeCanvas();
+                const getPos = (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const evt = e.touches ? e.touches[0] : e;
+                    return { x: (evt.clientX - rect.left) * (this.canvas.width / rect.width), y: (evt.clientY - rect.top) * (this.canvas.height / rect.height) };
+                };
+                const start = (e) => { e.preventDefault(); this.isDrawing = true; const pos = getPos(e); [this.lastX, this.lastY] = [pos.x, pos.y]; };
+                const move = (e) => {
+                    if(!this.isDrawing) return; e.preventDefault();
+                    const pos = getPos(e); this.ctx.beginPath(); this.ctx.moveTo(this.lastX, this.lastY); this.ctx.lineTo(pos.x, pos.y); this.ctx.stroke();
+                    [this.lastX, this.lastY] = [pos.x, pos.y];
+                };
+                const stop = () => this.isDrawing = false;
+                this.canvas.addEventListener('pointerdown', start); this.canvas.addEventListener('pointermove', move);
+                window.addEventListener('pointerup', stop); window.addEventListener('pointercancel', stop);
+            },
+            resizeCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width; this.canvas.height = rect.height;
+                this.clear();
+            },
+            clear() { this.ctx.fillStyle = '#ffffff'; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); this.ctx.lineWidth = 4; this.ctx.lineCap = 'square'; this.ctx.strokeStyle = '#000'; },
+            sendTo3DWorld() {
+                const dataURL = this.canvas.toDataURL('image/png');
+                Graphics3D.applyTextureToBoard(dataURL);
+                NetworkController.emit('receive_drawing', { image: dataURL });
+                this.close();
+            },
+            close() { document.getElementById('draw-overlay').classList.add('hidden'); },
+            open() { document.getElementById('draw-overlay').classList.remove('hidden'); this.resizeCanvas(); }
+        };
 
-                runDay() {
-                    UI.setPhase('day');
-                    UI.addMsg('النظام', 'استيقظت القرية. تناقشوا للبحث عن المافيا!', 'system');
-                    this.triggerBots();
-                },
+        const Graphics3D = {
+            scene: null, camera: null, renderer: null, breakers: [], whiteboardMat: null,
+            raycaster: new THREE.Raycaster(), centerVec: new THREE.Vector2(0,0),
+            move: { x: 0, y: 0 }, look: { x: 0, y: 0 }, yaw: 0, pitch: 0, clock: new THREE.Clock(),
+            
+            // Texture Generator for Voxel Art
+            createPixelTexture(type) {
+                const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+                const ctx = canvas.getContext('2d');
+                for(let i=0; i<16; i++) {
+                    for(let j=0; j<16; j++) {
+                        if(type === 'stone') {
+                            const c = 100 + Math.random() * 50;
+                            ctx.fillStyle = `rgb(${c},${c},${c})`;
+                        } else if(type === 'wood') {
+                            const c = 139 + Math.random() * 20;
+                            ctx.fillStyle = (i%4===0) ? '#5c3a21' : `rgb(${c},${c-50},30)`;
+                        } else if(type === 'obsidian') {
+                            const c = 20 + Math.random() * 30;
+                            ctx.fillStyle = `rgb(${c},${c/2},${c+20})`;
+                        }
+                        ctx.fillRect(i, j, 1, 1);
+                    }
+                }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+                return tex;
+            },
 
-                async triggerBots() {
-                    const aliveBots = state.players.filter(p => p.type === 'bot' && p.alive);
-                    const aliveNames = state.players.filter(p => p.alive).map(p => p.name).join('، ');
-                    const context = state.chatHistory.slice(-5).join(' | ');
+            init() {
+                const canvas = document.getElementById('game-canvas');
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x87CEEB); // لون سماء كلاسيكي
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+                this.camera.position.set(0, 1.6, 2);
+                this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                const light = new THREE.AmbientLight(0xffffff, 0.8);
+                this.scene.add(light);
+                const pLight = new THREE.PointLight(0xffaa00, 1, 10);
+                pLight.position.set(0, 3, 0);
+                this.scene.add(pLight);
 
-                    for (let i = 0; i < aliveBots.length; i++) {
-                        const bot = aliveBots[i];
-                        const prompt = `أنت تلعب لعبة المافيا. اسمك: ${bot.name}. دورك الحقيقي: ${bot.role} (أخفه عن الباقين إلا إذا لزم الأمر). 
-                        شخصيتك: ${BOT_PROFILES[bot.name]}. 
-                        اللاعبون الأحياء: ${aliveNames}. 
-                        سجل المحادثة الأخير: [${context}]. 
-                        رد بجملة واحدة فقط باللهجة السورية بناءً على سياق المحادثة وشخصيتك. لا تكتب اسمك في البداية.`;
+                this.buildVoxelRoom();
+                this.setupControls();
+                
+                if (State.player.role === 'solver') {
+                    document.getElementById('crosshair').style.display = 'block';
+                    // التفاعل بضغطة مزدوجة في منتصف الشاشة (Crosshair)
+                    canvas.addEventListener('pointerdown', () => this.interact());
+                }
 
-                        // Staggering bot responses
-                        setTimeout(async () => {
-                            try {
-                                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.apiKey}`, {
-                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                                });
-                                const data = await res.json();
-                                const text = data.candidates[0].content.parts[0].text.replace(/["']/g, "").trim();
-                                UI.addMsg(bot.name, text);
-                            } catch (e) {
-                                console.error(e);
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+                
+                this.gameLoop();
+            },
+
+            buildVoxelRoom() {
+                const stoneMat = new THREE.MeshLambertMaterial({ map: this.createPixelTexture('stone') });
+                const woodMat = new THREE.MeshLambertMaterial({ map: this.createPixelTexture('wood') });
+                const obsMat = new THREE.MeshLambertMaterial({ map: this.createPixelTexture('obsidian') });
+                const geo = new THREE.BoxGeometry(1, 1, 1);
+
+                // بناء الغرفة (10x10x5)
+                for(let x=-5; x<=5; x++) {
+                    for(let z=-5; z<=5; z++) {
+                        let floor = new THREE.Mesh(geo, woodMat); floor.position.set(x, 0, z); this.scene.add(floor);
+                        let ceil = new THREE.Mesh(geo, stoneMat); ceil.position.set(x, 5, z); this.scene.add(ceil);
+                        if(Math.abs(x)===5 || Math.abs(z)===5) {
+                            for(let y=1; y<=4; y++) {
+                                let wall = new THREE.Mesh(geo, obsMat); wall.position.set(x, y, z); this.scene.add(wall);
                             }
-                        }, i * 6000 + Math.random() * 2000); 
+                        }
                     }
                 }
-            };
 
-            return {
-                joinLobby() {
-                    state.name = document.getElementById('playerName').value || 'اللاعب';
-                    state.apiKey = document.getElementById('apiKey').value;
-                    state.players.push({name: state.name, type: 'human', alive: true});
+                // Whiteboard (لوحة الرسم) على الجدار الشمالي
+                const boardGeo = new THREE.PlaneGeometry(4, 3);
+                this.whiteboardMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const board = new THREE.Mesh(boardGeo, this.whiteboardMat);
+                board.position.set(0, 2.5, -4.49);
+                this.scene.add(board);
+
+                // لوحة القواطع على الجدار الجنوبي
+                for(let i=0; i<4; i++) {
+                    const group = new THREE.Group();
+                    group.position.set(-1.5 + (i * 1), 2, 4.49);
+                    group.rotation.y = Math.PI;
                     
-                    document.getElementById('loginScreen').classList.remove('active');
-                    document.getElementById('gameScreen').classList.add('active');
-                    UI.updatePlayers();
-                },
-                hostStartGame: () => Host.startGame(),
-                sendMessage() {
-                    const val = document.getElementById('chatInputUI').value;
-                    if(!val || !state.isAlive) return;
-                    UI.addMsg(state.name, val);
-                    document.getElementById('chatInputUI').value = '';
+                    const base = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1, 0.2), new THREE.MeshLambertMaterial({color: 0x333333}));
+                    group.add(base);
+
+                    const lever = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshLambertMaterial({color: 0xff0000}));
+                    lever.position.z = 0.1; lever.rotation.x = -Math.PI/4;
+                    lever.userData = { index: i, state: false };
                     
-                    // Trigger bots to reply occasionally when human speaks
-                    if(Math.random() > 0.3) setTimeout(() => Host.triggerBots(), 2000);
+                    group.add(lever);
+                    this.breakers.push(lever);
+                    this.scene.add(group);
                 }
-            };
-        })();
+            },
+
+            applyTextureToBoard(base64) {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width; canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    const tex = new THREE.CanvasTexture(canvas);
+                    tex.magFilter = THREE.NearestFilter;
+                    this.whiteboardMat.map = tex;
+                    this.whiteboardMat.needsUpdate = true;
+                };
+                img.src = base64;
+            },
+
+            interact() {
+                this.raycaster.setFromCamera(this.centerVec, this.camera); // من منتصف الشاشة (Crosshair)
+                const intersects = this.raycaster.intersectObjects(this.breakers);
+                if (intersects.length > 0 && intersects[0].distance < 3) {
+                    const lever = intersects[0].object;
+                    const newState = !lever.userData.state;
+                    lever.userData.state = newState;
+                    State.game.current[lever.userData.index] = newState;
+                    this.animateBreaker(lever.userData.index, newState);
+                    NetworkController.emit('breaker_toggle', { index: lever.userData.index, state: newState });
+                    this.verifyWin();
+                }
+            },
+
+            animateBreaker(idx, state) {
+                const lever = this.breakers[idx];
+                lever.rotation.x = state ? Math.PI/4 : -Math.PI/4;
+                lever.material.color.setHex(state ? 0x00ff00 : 0xff0000);
+            },
+
+            resetBreakers() { this.breakers.forEach((b, i) => { b.userData.state = false; this.animateBreaker(i, false); }); },
+
+            verifyWin() { 
+                if(State.game.current.every((v, i) => v === State.game.solution[i])) {
+                    NetworkController.emit('win_game', {}); GameManager.triggerWin();
+                }
+            },
+
+            setupControls() {
+                document.getElementById('joysticks-container').classList.remove('hidden');
+                const attach = (id, outVec) => {
+                    const zone = document.getElementById(id); const knob = zone.firstChild;
+                    let active = false;
+                    const move = (e) => {
+                        if(!active) return;
+                        const rect = zone.getBoundingClientRect();
+                        let dx = e.clientX - (rect.left + rect.width/2);
+                        let dy = e.clientY - (rect.top + rect.height/2);
+                        const maxR = rect.width/2 - 10;
+                        const dist = Math.min(Math.sqrt(dx*dx + dy*dy), maxR);
+                        const angle = Math.atan2(dy, dx);
+                        dx = Math.cos(angle)*dist; dy = Math.sin(angle)*dist;
+                        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+                        outVec.x = dx / maxR; outVec.y = dy / maxR;
+                    };
+                    zone.addEventListener('pointerdown', (e) => { active = true; zone.setPointerCapture(e.pointerId); move(e); });
+                    zone.addEventListener('pointermove', move);
+                    const stop = () => { active = false; knob.style.transform = 'translate(0,0)'; outVec.x = 0; outVec.y = 0; };
+                    zone.addEventListener('pointerup', stop); zone.addEventListener('pointercancel', stop);
+                };
+                attach('joystick-left', this.move); attach('joystick-right', this.look);
+            },
+
+            gameLoop() {
+                requestAnimationFrame(() => this.gameLoop());
+                const delta = this.clock.getDelta();
+                
+                this.yaw -= this.look.x * 2.5 * delta;
+                this.pitch -= this.look.y * 2.5 * delta;
+                this.pitch = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, this.pitch));
+                
+                this.camera.rotation.order = 'YXZ';
+                this.camera.rotation.y = this.yaw;
+                this.camera.rotation.x = this.pitch;
+
+                const dir = new THREE.Vector3(); this.camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+                const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
+                
+                const speed = 4;
+                this.camera.position.addScaledVector(dir, -this.move.y * speed * delta);
+                this.camera.position.addScaledVector(right, this.move.x * speed * delta);
+                
+                // اصطدام ماينكرافت (منع الخروج من الجدران)
+                const bounds = 3.8;
+                this.camera.position.x = Math.max(-bounds, Math.min(bounds, this.camera.position.x));
+                this.camera.position.z = Math.max(-bounds, Math.min(bounds, this.camera.position.z));
+                this.camera.position.y = 1.6; // ارتفاع ثابت للعين
+                
+                this.renderer.render(this.scene, this.camera);
+            }
+        };
+
+        const GameManager = {
+            bootstrap(role) {
+                const name = document.getElementById('playerName').value.trim();
+                const room = document.getElementById('roomCode').value.trim();
+                if (!name || !room) return alert("أدخل اسمك ورقم الغرفة!");
+                State.player = { name, room, role };
+                document.getElementById('setup-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('setup-screen').classList.add('hidden');
+                    document.getElementById('loading-screen').classList.remove('hidden');
+                    NetworkController.init();
+                }, 400);
+            },
+            startGameplay() {
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('hud-layer').classList.remove('hidden');
+                document.getElementById('role-text').innerText = State.player.role === 'drawer' ? "الرسام 🎨" : "المهندس 🔧";
+                document.getElementById('task-text').innerText = State.player.role === 'drawer' ? "ارسم اللغز وأرسله للمهندس" : "استخدم المؤشر (Crosshair) لتحريك القواطع";
+                if (State.player.role === 'drawer') {
+                    document.getElementById('btn-open-paper').style.display = 'block';
+                    DrawingEngine.init(); DrawingEngine.open();
+                }
+                Graphics3D.init();
+            },
+            triggerWin() {
+                const overlay = document.createElement('div'); overlay.className = 'overlay-screen';
+                overlay.style.backgroundColor = 'rgba(16, 185, 129, 0.9)'; overlay.style.zIndex = '9999';
+                overlay.innerHTML = `<h1 style="font-size: 3rem; color: #fff; text-shadow: 2px 2px 0 #000;">تم الحل!</h1>
+                                     <button class="btn btn-warning" onclick="location.reload()" style="margin-top:20px;">العب مجدداً</button>`;
+                document.body.appendChild(overlay);
+            }
+        };
     </script>
 </body>
 </html>
