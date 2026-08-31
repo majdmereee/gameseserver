@@ -3,105 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Dark Tether - 50 Stages (Ultimate Stability & Voice)</title>
+    <title>Dark Tether - Ultimate 3D MultiPlayer (Build v9.0)</title>
     
-    <!-- استدعاء مكتبة Socket.IO للاتصال اللحظي -->
+    <!-- استدعاء مكتبة Socket.IO للاتصال اللحظي كما في الوثيقة -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- استدعاء محرك Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <style>
-        :root { --c-main: #3b82f6; --c-run: #ef4444; --c-bg: #020202; }
+        /* ============================================================================
+           CORE STYLES & HUD (MASSIVE UI SYSTEM)
+           ============================================================================ */
+        :root { --c-main: #3b82f6; --c-run: #ef4444; --c-bg: #020202; --c-hud: rgba(0,0,0,0.65); }
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Courier New', Courier, monospace; }
         body, html { width: 100%; height: 100%; overflow: hidden; background-color: var(--c-bg); touch-action: none; }
         
         #game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; outline: none; }
         
-        /* واجهة اللوبي الاحترافية */
-        #lobby-ui { position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at center, #111, #000); transition: opacity 0.8s ease; }
-        .lobby-box { background: rgba(10, 10, 10, 0.95); border: 1px solid #333; padding: 50px; width: 90%; max-width: 480px; border-radius: 4px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
-        .game-title { text-align: center; color: #fff; font-size: 2.2rem; font-weight: 900; letter-spacing: 4px; margin-bottom: 30px; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        /* Lobby Screen */
+        #lobby-ui { position: absolute; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at center, #1a1a24, #000); transition: opacity 1s ease; }
+        .lobby-box { background: rgba(5, 5, 10, 0.95); border: 1px solid #333; padding: 50px; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,1); position: relative; overflow: hidden; }
+        .lobby-box::before { content: ''; position: absolute; top:-50%; left:-50%; width: 200%; height: 200%; background: conic-gradient(transparent, rgba(59, 130, 246, 0.3), transparent 30%); animation: spin 4s linear infinite; z-index: 0; }
+        .lobby-content { position: relative; z-index: 1; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        .game-title { text-align: center; color: #fff; font-size: 2.5rem; font-weight: 900; letter-spacing: 5px; margin-bottom: 25px; text-shadow: 0 0 15px rgba(255,255,255,0.3); }
         .input-group { margin-bottom: 25px; }
-        .input-group label { display: block; color: #888; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem; letter-spacing: 1px; }
-        .lobby-input { width: 100%; padding: 15px; background: #050505; border: 1px solid #222; color: #fff; font-size: 1.2rem; text-align: center; outline: none; transition: 0.3s; }
-        .lobby-input:focus { border-color: var(--c-main); box-shadow: 0 0 10px rgba(59, 130, 246, 0.2); }
+        .input-group label { display: block; color: #aaa; margin-bottom: 8px; font-weight: bold; font-size: 0.95rem; letter-spacing: 1px; }
+        .lobby-input { width: 100%; padding: 16px; background: #0a0a0a; border: 1px solid #444; color: #fff; font-size: 1.2rem; text-align: center; outline: none; transition: 0.3s; border-radius: 4px; }
+        .lobby-input:focus { border-color: var(--c-main); box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
         
         .btn-group { display: flex; flex-direction: column; gap: 15px; margin-top: 35px; }
-        .btn { padding: 18px; font-size: 1.1rem; font-weight: bold; color: #fff; border: none; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
-        .btn:active { transform: scale(0.98); }
-        .btn-guide { background: linear-gradient(90deg, #1e3a8a, #2563eb); }
-        .btn-runner { background: linear-gradient(90deg, #7f1d1d, #dc2626); }
+        .btn { padding: 18px; font-size: 1.2rem; font-weight: bold; color: #fff; border: none; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 2px; border-radius: 4px; position: relative; overflow: hidden; }
+        .btn:active { transform: scale(0.96); }
+        .btn-guide { background: linear-gradient(90deg, #1e3a8a, #2563eb); box-shadow: 0 5px 20px rgba(37, 99, 235, 0.4); }
+        .btn-runner { background: linear-gradient(90deg, #7f1d1d, #dc2626); box-shadow: 0 5px 20px rgba(220, 38, 38, 0.4); }
 
-        /* واجهة اللعب HUD */
+        /* HUD & Overlay */
         #hud-layer { position: absolute; inset: 0; z-index: 10; display: none; pointer-events: none; }
-        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 4px; height: 4px; background: rgba(255,255,255,0.9); border-radius: 50%; box-shadow: 0 0 5px #000; }
+        .crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 6px; height: 6px; background: rgba(255,255,255,0.9); border-radius: 50%; box-shadow: 0 0 8px #000; }
         
-        /* شريط علوي */
-        #top-hud { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; font-size: 0.75rem; font-weight: bold; color: #aaa; background: rgba(0,0,0,0.5); padding: 4px 15px; border-radius: 20px; border: 1px solid #333; backdrop-filter: blur(5px); }
-        #top-hud span { color: #fff; }
-
-        /* التلميحات */
-        #hint-ui { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.95); border: 1px solid #ff4400; color: #ffaa00; padding: 15px 25px; font-size: 1rem; font-weight: bold; text-align: center; display: none; opacity: 0; transition: opacity 0.5s; width: 85%; max-width: 450px; line-height: 1.6; }
-
-        /* أزرار التواصل */
-        .comm-buttons { position: absolute; bottom: 20px; left: 20px; display: flex; gap: 10px; pointer-events: auto; }
-        .comm-btn { width: 45px; height: 45px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 1.2rem; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; backdrop-filter: blur(5px); touch-action: none; }
-        .comm-btn.active { background: rgba(255, 50, 50, 0.7) !important; transform: scale(0.9); border-color: #fff; box-shadow: 0 0 15px rgba(255,0,0,0.5); }
+        #top-hud { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; font-size: 0.9rem; font-weight: bold; color: #ccc; background: var(--c-hud); padding: 8px 25px; border-radius: 30px; border: 1px solid #444; backdrop-filter: blur(8px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        #top-hud span { color: #fff; margin-right: 5px; }
         
-        /* صندوق المحادثة */
-        #chat-box { position: absolute; bottom: 75px; left: 20px; width: 250px; height: 150px; background: rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 8px; display: none; flex-direction: column; pointer-events: auto; }
-        #chat-msgs { flex: 1; overflow-y: auto; padding: 8px; color: #ddd; font-size: 0.8rem; line-height: 1.4; }
-        #chat-input { width: 100%; border: none; border-top: 1px solid #333; background: #111; color: #fff; padding: 8px; font-size: 0.8rem; outline: none; }
+        #status-hud { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 5px; font-size: 0.75rem; color: #0f0; background: rgba(0,30,0,0.6); padding: 10px; border-radius: 8px; border: 1px solid #0f0; }
 
-        /* التحكم باللمس */
+        #hint-ui { position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); background: rgba(10,5,0,0.95); border: 2px solid #ff4400; color: #ffaa00; padding: 20px 30px; font-size: 1.1rem; font-weight: bold; text-align: center; display: none; opacity: 0; transition: opacity 0.5s; width: 85%; max-width: 500px; line-height: 1.6; border-radius: 8px; box-shadow: 0 0 20px rgba(255,68,0,0.3); }
+
+        /* Communication Controls */
+        .comm-buttons { position: absolute; bottom: 25px; left: 25px; display: flex; gap: 15px; pointer-events: auto; }
+        .comm-btn { width: 55px; height: 55px; background: rgba(20,20,20,0.7); border: 2px solid rgba(255,255,255,0.2); color: #fff; font-size: 1.4rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(5px); touch-action: none; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .comm-btn.active { background: rgba(220, 38, 38, 0.85) !important; transform: scale(0.92); border-color: #ffcccc; box-shadow: 0 0 20px rgba(255,0,0,0.7); }
+        
+        #chat-box { position: absolute; bottom: 90px; left: 25px; width: 280px; height: 180px; background: rgba(10,10,10,0.9); border: 1px solid #444; border-radius: 8px; display: none; flex-direction: column; pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        #chat-msgs { flex: 1; overflow-y: auto; padding: 12px; color: #ddd; font-size: 0.85rem; line-height: 1.5; }
+        #chat-input { width: 100%; border: none; border-top: 1px solid #444; background: #050505; color: #fff; padding: 12px; font-size: 0.9rem; outline: none; border-radius: 0 0 8px 8px; }
+
+        /* Touch Controls */
         #touch-controls { position: absolute; inset: 0; z-index: 5; display: none; touch-action: none; pointer-events: none; }
         .touch-half { position: absolute; top: 0; height: 100%; pointer-events: auto; }
         #left-half { left: 0; width: 50%; }
         #right-half { right: 0; width: 50%; }
-        #joystick-bg { position: absolute; width: 100px; height: 100px; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; }
-        #joystick-thumb { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        #joystick-bg { position: absolute; width: 120px; height: 120px; border: 2px solid rgba(255,255,255,0.15); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,0.05), transparent); transition: opacity 0.2s; }
+        #joystick-thumb { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 10px rgba(255,255,255,0.2); }
 
-        /* الأزرار التفاعلية */
-        .right-buttons { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; pointer-events: auto; }
-        .action-btn { width: 55px; height: 55px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 1.3rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(5px); }
-        .action-btn:active { transform: scale(0.9); }
+        /* Action Buttons */
+        .right-buttons { position: absolute; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 20px; pointer-events: auto; }
+        .action-btn { width: 65px; height: 65px; background: rgba(30,30,30,0.8); border: 2px solid rgba(255,255,255,0.2); color: #fff; font-size: 1.6rem; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(8px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); transition: 0.2s; }
+        .action-btn:active { transform: scale(0.9); background: rgba(60,60,60,0.9); }
         
-        #btn-door { display: none; background: rgba(150, 80, 20, 0.6); border-color: #f90; }
+        #btn-door { display: none; background: rgba(180, 90, 20, 0.8); border-color: #ffaa00; }
         
-        #btn-nvg { position: absolute; top: 20px; right: 20px; width: 50px; height: 50px; background: rgba(0,30,0,0.6); border: 1px solid #0f0; color: #0f0; font-size: 0.8rem; font-weight: bold; border-radius: 8px; display: none; pointer-events: auto; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
-        #btn-nvg.active { background: rgba(0,255,0,0.3); box-shadow: 0 0 15px #0f0; color: #fff; }
+        #btn-nvg { position: absolute; top: 25px; right: 25px; width: 60px; height: 60px; background: rgba(0,40,0,0.8); border: 2px solid #0f0; color: #0f0; font-size: 0.85rem; font-weight: bold; border-radius: 12px; display: none; pointer-events: auto; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(0,255,0,0.2); }
+        #btn-nvg.active { background: rgba(0,255,0,0.4); box-shadow: 0 0 25px #0f0; color: #fff; text-shadow: 0 0 5px #000; }
 
         #flash-overlay { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 99; transition: opacity 0.3s; }
+        #waiting-screen { position: absolute; inset: 0; background: rgba(0,0,0,0.9); color: white; display: none; z-index: 95; align-items: center; justify-content: center; flex-direction: column; font-size: 1.5rem; font-weight: bold; }
+        .spinner { margin-top: 20px; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
     </style>
 </head>
 <body>
 
     <div id="game-canvas"></div>
     <div id="flash-overlay"></div>
+    
+    <div id="waiting-screen">
+        <div>جاري الاتصال والبحث عن الشريك في الغرفة...</div>
+        <div class="spinner"></div>
+    </div>
 
+    <!-- واجهة الدخول -->
     <div id="lobby-ui">
         <div class="lobby-box">
-            <h1 class="game-title">TETHERED SOULS<br><span style="font-size:0.9rem; color:#888; font-weight:normal;">THE 50 STAGES OF ABYSS</span></h1>
-            <div class="input-group">
-                <label>معرف الهوية</label>
-                <input type="text" id="inp-name" class="lobby-input" placeholder="أدخل اسمك...">
-            </div>
-            <div class="input-group">
-                <label>تردد السيرفر (الغرفة)</label>
-                <input type="number" id="inp-room" class="lobby-input" placeholder="0000">
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-guide" onclick="GameCore.boot('guide')">المهندس (الرائي)</button>
-                <button class="btn btn-runner" onclick="GameCore.boot('runner')">المنفذ (المتحكم)</button>
+            <div class="lobby-content">
+                <h1 class="game-title">TETHERED SOULS</h1>
+                <div class="input-group">
+                    <label>معرف الهوية السري (الاسم)</label>
+                    <input type="text" id="inp-name" class="lobby-input" placeholder="أدخل اسمك...">
+                </div>
+                <div class="input-group">
+                    <label>تردد السيرفر (رقم الغرفة)</label>
+                    <input type="number" id="inp-room" class="lobby-input" placeholder="مثال: 7777">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-guide" onclick="GameCore.boot('guide')">دخول كـ: المهندس (الرائي)</button>
+                    <button class="btn btn-runner" onclick="GameCore.boot('runner')">دخول كـ: المنفذ (المتحكم)</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- واجهة اللعب -->
     <div id="hud-layer">
         <div class="crosshair"></div>
-        <div id="top-hud">
-            <div>المرحلة: <span id="level-num">1</span>/50</div>
-            <div>المهام: <span id="task-count">0</span></div>
+        
+        <div id="status-hud">
+            <div>PING: <span id="ping-val">--</span>ms</div>
+            <div>TENSION: <span id="tension-val">0</span>%</div>
         </div>
+
+        <div id="top-hud">
+            <div>المرحلة: <span id="level-num">1</span> / 50</div>
+            <div>تزامن الشبكة: <span id="sync-status" style="color:#0f0;">مستقر</span></div>
+        </div>
+        
         <div id="hint-ui">...</div>
         <div id="btn-nvg">NVG</div>
 
@@ -112,7 +137,7 @@
         
         <div id="chat-box">
             <div id="chat-msgs"></div>
-            <input type="text" id="chat-input" placeholder="رسالة...">
+            <input type="text" id="chat-input" placeholder="اكتب رسالة سريعة...">
         </div>
 
         <div class="right-buttons">
@@ -129,7 +154,7 @@
 
     <script>
         // ============================================================================
-        // 1. ENGINE: PixelArt Texture Generator
+        // 1. ADVANCED TEXTURE ENGINE (PixelArt Generation)
         // ============================================================================
         class TextureEngine {
             static generate(size, renderFunc) {
@@ -143,68 +168,61 @@
             }
 
             static get StoneFloor() {
-                return this.generate(16, (ctx) => {
-                    ctx.fillStyle = '#0f0f0f'; ctx.fillRect(0,0,16,16);
+                return this.generate(32, (ctx) => {
+                    ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0,0,32,32);
                     ctx.fillStyle = '#151515';
-                    for(let i=0; i<16; i+=8) for(let j=0; j<16; j+=8) ctx.fillRect(i+1, j+1, 6, 6);
+                    for(let i=0; i<32; i+=16) for(let j=0; j<32; j+=16) ctx.fillRect(i+2, j+2, 12, 12);
+                    ctx.fillStyle = '#080808';
+                    for(let i=0; i<30; i++) { ctx.fillRect(Math.random()*32, Math.random()*32, 1, 1); }
                 });
             }
             static get BrickWall() {
-                return this.generate(16, (ctx) => {
-                    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(0,0,16,16);
+                return this.generate(32, (ctx) => {
+                    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(0,0,32,32);
                     ctx.fillStyle = '#111';
-                    ctx.fillRect(0,3,16,1); ctx.fillRect(0,7,16,1); ctx.fillRect(0,11,16,1); ctx.fillRect(0,15,16,1);
-                    ctx.fillRect(4,0,1,3); ctx.fillRect(12,0,1,3); ctx.fillRect(8,4,1,3);
-                    ctx.fillRect(4,8,1,3); ctx.fillRect(12,8,1,3); ctx.fillRect(8,12,1,3);
+                    for(let y=0; y<32; y+=8) ctx.fillRect(0, y+6, 32, 2);
+                    for(let y=0; y<32; y+=16) {
+                        ctx.fillRect(8, y, 2, 6); ctx.fillRect(24, y, 2, 6);
+                        ctx.fillRect(0, y+8, 2, 6); ctx.fillRect(16, y+8, 2, 6);
+                    }
                 });
             }
             static get GlassNVG() {
                 return this.generate(16, (ctx) => {
                     ctx.fillStyle = 'rgba(0,30,0,0.6)'; ctx.fillRect(0,0,16,16);
-                    ctx.fillStyle = 'rgba(0,200,0,0.8)';
+                    ctx.fillStyle = 'rgba(0,255,0,0.3)';
                     ctx.fillRect(0,0,16,1); ctx.fillRect(0,15,16,1);
                     ctx.fillRect(0,0,1,16); ctx.fillRect(15,0,1,16);
-                    ctx.fillRect(2,2,3,1); 
+                    ctx.fillStyle = 'rgba(0,255,0,0.8)'; ctx.fillRect(2,2,4,1); 
                 });
             }
             static get RustyDoor() {
-                return this.generate(16, (ctx) => {
-                    ctx.fillStyle = '#3a2311'; ctx.fillRect(0,0,16,16);
-                    ctx.fillStyle = '#221105'; ctx.fillRect(1,1,14,14);
-                    ctx.fillStyle = '#7a6040'; ctx.fillRect(12,7,2,2); 
+                return this.generate(32, (ctx) => {
+                    ctx.fillStyle = '#3a2311'; ctx.fillRect(0,0,32,32);
+                    ctx.fillStyle = '#221105'; ctx.fillRect(2,2,28,28);
+                    ctx.fillStyle = '#7a6040'; ctx.fillRect(24,14,4,4); // Handle
+                    ctx.fillStyle = '#1a0a00';
+                    for(let i=0; i<15; i++) { ctx.fillRect(Math.random()*32, Math.random()*32, 2, 2); }
                 });
             }
-            static get Lurker() {
+            static get PlayerAvatar() {
+                // نسيج خاص بمجسم اللاعب الآخر ليكون واضحاً في الظلام
                 return this.generate(16, (ctx) => {
-                    ctx.fillStyle = '#000'; ctx.fillRect(0,0,16,16);
-                    ctx.fillStyle = '#ff0000'; ctx.fillRect(3,4,3,2); ctx.fillRect(10,4,3,2);
-                });
-            }
-            static get Spike() {
-                return this.generate(16, (ctx) => {
-                    ctx.fillStyle = '#111'; ctx.fillRect(0,0,16,16);
-                    ctx.fillStyle = '#555';
-                    ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(13,16); ctx.lineTo(3,16); ctx.fill();
-                });
-            }
-            static get HintRune() {
-                return this.generate(16, (ctx) => {
-                    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(0,0,16,16);
-                    ctx.fillStyle = '#aa4400';
-                    ctx.fillRect(4,4,8,1); ctx.fillRect(7,5,2,6); ctx.fillRect(4,11,8,1);
+                    ctx.fillStyle = '#222'; ctx.fillRect(0,0,16,16);
+                    ctx.fillStyle = '#3b82f6'; ctx.fillRect(4,4,8,8); // توهج أزرق في المنتصف
                 });
             }
         }
 
         // ============================================================================
-        // 2. ENGINE: 50-Stage Cryptic Level Architect (Guaranteed Paths)
+        // 2. PROCEDURAL LEVEL ARCHITECT (Guaranteed Paths & Complex Structures)
         // ============================================================================
         const HINT_DATABASE = [
             "الظلام ليس فارغاً، إنه ينظر إليك.", "نصف متر فقط تفصلك عن النهاية.", 
             "الرائي يرى ما خفي، لكنه لا يملك القوة.", "وجه نورك نحو العيون الحمراء ليحترق الظل.",
-            "الجدران تتنفس، لا تثق بها.", "إذا ابتعدت أكثر من نصف متر، سأسحبك لعالمي.",
-            "الصمت هو لغة الموتى، استخدم اللاسلكي بحذر.", "الأشواك لا ترحم من لا يقفز.",
-            "الباب لن يفتح إلا للمتحكم، وفقط إذا اقترب جداً.", "المتاهة تتغير، لا تنظر للخلف."
+            "الجدران تتنفس، لا تثق بها.", "إذا ابتعدت عني سأسحبك لعالمي بالقوة.",
+            "الصمت هو لغة الموتى، استخدم اللاسلكي بحذر.", "الأشواك لا ترحم من ينسى القفز.",
+            "الباب لن يفتح إلا للمتحكم، اقترب منه.", "الجنزير بينكما هو شريان الحياة الوحيد."
         ];
 
         class LevelArchitect {
@@ -215,6 +233,7 @@
                 let grid = Array(s).fill().map(() => Array(s).fill(1));
                 let doors = [], hints = [], spikes = [], exit = null;
                 
+                // الخوارزمية: Recursive Backtracking لإنشاء متاهة
                 const carve = (x, y) => {
                     grid[y][x] = 0;
                     const dirs = [[0,-2], [0,2], [-2,0], [2,0]].sort(() => Math.random() - 0.5);
@@ -228,20 +247,22 @@
                 };
                 carve(1, 1);
 
-                // ضمان فتح طريق للنهاية
+                // ضمان وجود مخرج مفتوح دائماً
                 grid[s-2][s-2] = 0; grid[s-3][s-2] = 0; grid[s-2][s-3] = 0;
 
-                const roomCount = Math.floor(levelNum / 4);
+                // إنشاء غرف عشوائية لكسر ملل الممرات الضيقة
+                const roomCount = Math.floor(levelNum / 3);
                 for(let i=0; i<roomCount; i++) {
-                    let rx = Math.floor(Math.random()*(s-4))+2;
-                    let ry = Math.floor(Math.random()*(s-4))+2;
-                    for(let dy=0; dy<3; dy++) {
-                        for(let dx=0; dx<3; dx++) {
+                    let rx = Math.floor(Math.random()*(s-5))+2;
+                    let ry = Math.floor(Math.random()*(s-5))+2;
+                    for(let dy=0; dy<4; dy++) {
+                        for(let dx=0; dx<4; dx++) {
                             if (ry+dy < s-1 && rx+dx < s-1) grid[ry+dy][rx+dx] = 0;
                         }
                     }
                 }
 
+                // تحديد المخرج
                 for(let y=s-2; y>0; y--) {
                     for(let x=s-2; x>0; x--) {
                         if(grid[y][x] === 0 && !exit) {
@@ -250,9 +271,10 @@
                     }
                 }
 
+                // توزيع الفخاخ، الأبواب، والتلميحات
                 for(let y=2; y<s-2; y++) {
                     for(let x=2; x<s-2; x++) {
-                        if(grid[y][x] === 0 && Math.random() < 0.08) {
+                        if(grid[y][x] === 0 && Math.random() < 0.1) {
                             let type = Math.random();
                             if(type < 0.3) { grid[y][x] = 2; doors.push({x, z:y}); }
                             else if(type < 0.6 && levelNum > 2) { grid[y][x] = 3; spikes.push({x, z:y}); }
@@ -269,32 +291,84 @@
         }
 
         // ============================================================================
-        // 3. NETWORK CONTROLLER (كما ورد في الوثيقة للربط الموثوق)
+        // 3. AUDIO SYNTHESIZER (Procedural Sound Effects without assets)
+        // ============================================================================
+        const AudioEngine = {
+            ctx: null,
+            init() {
+                if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            playTension(intensity) { // صوت ارتجاج عند شد الجنزير
+                if(!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(40 + (intensity * 40), this.ctx.currentTime);
+                gain.gain.setValueAtTime(intensity * 0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+            playMonsterHit() {
+                if(!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+            }
+        };
+
+        // ============================================================================
+        // 4. NETWORK CONTROLLER (The exact reliable robust connection class)
         // ============================================================================
         const NetworkController = {
             socket: null,
             SERVER_URL: 'https://render-kr1o.onrender.com/',
+            lastPing: 0,
             
             init() {
                 try {
+                    document.getElementById('waiting-screen').style.display = 'flex';
+                    // إنشاء الاتصال اللحظي وإجبار استخدام WebSockets لسرعة النقل
                     this.socket = io(this.SERVER_URL, { transports: ['websocket'] });
                     
                     this.socket.on('connect', () => { 
                         console.log("Connected securely to Server.");
-                        // إرسال معلومات الانضمام فوراً
-                        this.emit('join_room', { name: GameCore.state.name });
+                        document.getElementById('waiting-screen').style.display = 'none';
+                        this.emitRaw('join_room', { room: GameCore.state.room, name: GameCore.state.name });
+                        
+                        // بدء حلقة حساب البينغ (Ping)
+                        setInterval(() => { this.lastPing = Date.now(); this.emitRaw('ping_req'); }, 2000);
+                    });
+
+                    this.socket.on('ping_res', () => {
+                        const latency = Date.now() - this.lastPing;
+                        document.getElementById('ping-val').innerText = latency;
+                        document.getElementById('ping-val').style.color = latency < 100 ? '#0f0' : (latency < 200 ? '#ff0' : '#f00');
                     });
                     
-                    // الاستماع للبيانات القادمة من السيرفر بالنمط المعتمد
+                    // استقبال الأحداث من اللاعب الآخر
                     this.socket.on('otherPlayerMoved', (data) => this.processIncoming(data));
                     
-                    // أحداث الصوت والمحادثة المخصصة
+                    // استقبال أحداث الصوت والمحادثة
                     this.socket.on('chatMsg', (data) => GameCore.commSys.handleChat(data));
                     this.socket.on('voiceData', (data) => GameCore.commSys.handleVoice(data));
                     
-                } catch (e) { console.error("Network Initialization Failed:", e); }
+                } catch (e) { 
+                    console.error("Network Initialization Failed:", e); 
+                    document.getElementById('sync-status').innerText = "مقطوع";
+                    document.getElementById('sync-status').style.color = "#f00";
+                }
             },
             
+            // الدالة الموحدة للإرسال داخل اللعبة
             emit(type, payload) { 
                 if (this.socket?.connected) {
                     this.socket.emit('playerMoved', { 
@@ -306,16 +380,20 @@
                 }
             },
             
+            // للإرسال الخام (الصوت والمحادثة)
             emitRaw(eventName, payload) {
                 if (this.socket?.connected) this.socket.emit(eventName, payload);
             },
             
+            // معالجة البيانات القادمة من السيرفر
             processIncoming(data) {
+                // حماية: التأكد من الغرفة واختلاف الأدوار
                 if (data.room !== GameCore.state.room || data.role === GameCore.state.role) return; 
                 
                 switch (data.type) {
                     case 'sync_pos': 
-                        GameCore.remotePos.set(data.x, data.y, data.z);
+                        // تحديث موقع اللاعب الآخر بشكل ناعم (Interpolation سيتم في التيك)
+                        GameCore.remoteTargetPos.set(data.x, data.y, data.z);
                         if (data.lvl > GameCore.state.level) {
                             GameCore.state.level = data.lvl;
                             GameCore.loadLevel(data.lvl);
@@ -333,7 +411,7 @@
         };
 
         // ============================================================================
-        // 4. ENGINE: Audio & Chat System (Walkie-Talkie Push-to-Talk)
+        // 5. COMMUNICATION SYSTEM (Walkie-Talkie Audio Filter & Chat)
         // ============================================================================
         class CommunicationSystem {
             constructor(room, role) {
@@ -387,8 +465,6 @@
                 this.micBtn.addEventListener('pointerdown', startMic);
                 this.micBtn.addEventListener('pointerup', stopMic);
                 this.micBtn.addEventListener('pointerleave', stopMic);
-                
-                setTimeout(() => this.initLiveCall(), 1500);
             }
 
             handleChat(data) {
@@ -414,6 +490,7 @@
             async initLiveCall() {
                 if(this.localStream) return;
                 try {
+                    AudioEngine.init();
                     this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     this.localStream.getAudioTracks()[0].enabled = false; 
                     
@@ -437,7 +514,7 @@
                         audio = document.createElement('audio');
                         audio.id = 'live-audio';
                         audio.autoplay = true;
-                        audio.muted = true; 
+                        audio.muted = true; // نكتمه لأننا سنمرره عبر فلاتر اللاسلكي
                         document.body.appendChild(audio);
                     }
                     audio.srcObject = e.streams[0];
@@ -446,15 +523,16 @@
             }
 
             applyRadioEffect(audioElement, stream) {
-                if (!this.audioCtx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    this.audioCtx = new AudioContext();
-                }
+                if (!this.audioCtx) this.audioCtx = AudioEngine.ctx || new (window.AudioContext || window.webkitAudioContext)();
+                
                 const source = this.audioCtx.createMediaStreamSource(stream);
+                // فلتر لصناعة صوت راديو/لاسلكي (Bandpass)
                 const bandpass = this.audioCtx.createBiquadFilter();
                 bandpass.type = 'bandpass';
                 bandpass.frequency.value = 1200; 
                 bandpass.Q.value = 0.8; 
+                
+                // تشويه للصوت (Distortion)
                 const distortion = this.audioCtx.createWaveShaper();
                 distortion.curve = this.makeDistortionCurve(15);
                 distortion.oversample = '4x';
@@ -466,10 +544,7 @@
             }
 
             makeDistortionCurve(amount) {
-                let k = typeof amount === 'number' ? amount : 50,
-                    n_samples = 44100,
-                    curve = new Float32Array(n_samples),
-                    deg = Math.PI / 180, i = 0, x;
+                let k = typeof amount === 'number' ? amount : 50, n_samples = 44100, curve = new Float32Array(n_samples), deg = Math.PI / 180, i = 0, x;
                 for ( ; i < n_samples; ++i ) {
                     x = i * 2 / n_samples - 1;
                     curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
@@ -484,23 +559,24 @@
         }
 
         // ============================================================================
-        // 5. ENGINE: Core Game Physics & Logic
+        // 6. CORE ENGINE & PHYSICS LOGIC
         // ============================================================================
         const GameCore = {
-            state: { role: '', room: '', name: '', level: 1, tetherMax: 1.0 }, 
+            state: { role: '', room: '', name: '', level: 1, tetherMax: 1.5 }, // 1.5 in-game units = 0.75 meters
             input: { mx: 0, my: 0, isJumping: false },
             
             boot(role) {
                 this.state.name = document.getElementById('inp-name').value.trim();
                 this.state.room = document.getElementById('inp-room').value.trim();
-                if(!this.state.name || !this.state.room) return;
+                if(!this.state.name || !this.state.room) return alert('يرجى إدخال الاسم ورقم الغرفة!');
                 
                 this.state.role = role;
                 document.getElementById('lobby-ui').style.opacity = '0';
                 
-                // بدء تشغيل الشبكة أولاً
+                // 1. بدء الاتصال بالسيرفر
                 NetworkController.init();
 
+                // 2. إخفاء اللوبي وإظهار المحرك
                 setTimeout(() => {
                     document.getElementById('lobby-ui').style.display = 'none';
                     document.getElementById('hud-layer').style.display = 'block';
@@ -515,11 +591,12 @@
 
                 this.camera = new THREE.PerspectiveCamera(85, window.innerWidth/window.innerHeight, 0.1, 100);
                 
-                this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
-                this.renderer.setPixelRatio(1);
+                this.renderer.setPixelRatio(window.devicePixelRatio > 1 ? 1.5 : 1);
                 document.getElementById('game-canvas').appendChild(this.renderer.domElement);
 
+                // خامات تتفاعل مع الإضاءة الواقعية
                 this.mats = {
                     floor: new THREE.MeshPhongMaterial({ map: TextureEngine.StoneFloor }),
                     wall: new THREE.MeshPhongMaterial({ map: TextureEngine.BrickWall }),
@@ -527,20 +604,26 @@
                     door: new THREE.MeshPhongMaterial({ map: TextureEngine.RustyDoor }),
                     hint: new THREE.MeshPhongMaterial({ map: TextureEngine.HintRune }),
                     spike: new THREE.MeshPhongMaterial({ map: TextureEngine.Spike }),
-                    exit: new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true })
+                    exit: new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.5 })
                 };
 
                 this.worldGroup = new THREE.Group();
                 this.scene.add(this.worldGroup);
 
+                // نواقل الحركة والفيزياء
                 this.guidePos = new THREE.Vector3();
                 this.runnerPos = new THREE.Vector3();
                 this.localPos = this.state.role === 'guide' ? this.guidePos : this.runnerPos;
                 this.remotePos = this.state.role === 'guide' ? this.runnerPos : this.guidePos;
+                
+                // ناقل لتنعيم حركة اللاعب الآخر (Interpolation)
+                this.remoteTargetPos = this.remotePos.clone();
+                
                 this.velY = 0; this.isGrounded = true;
 
                 this.setupRoleLogic();
                 this.setupInputs();
+                this.createAvatarAndTether();
                 
                 this.commSys = new CommunicationSystem(this.state.room, this.state.role);
 
@@ -548,6 +631,20 @@
 
                 this.clock = new THREE.Clock();
                 this.renderer.setAnimationLoop(() => this.tick());
+            },
+
+            createAvatarAndTether() {
+                // 1. مجسم اللاعب الآخر (الأفاتار)
+                const avatarGeo = new THREE.CapsuleGeometry(0.4, 1.2, 4, 8);
+                const avatarMat = new THREE.MeshPhongMaterial({ map: TextureEngine.PlayerAvatar, emissive: 0x111133 });
+                this.avatarMesh = new THREE.Mesh(avatarGeo, avatarMat);
+                this.scene.add(this.avatarMesh);
+
+                // 2. الجنزير المرئي (Tether Line)
+                const tetherMat = new THREE.LineBasicMaterial({ color: 0x888888, linewidth: 4 });
+                const tetherGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]);
+                this.tetherLine = new THREE.Line(tetherGeo, tetherMat);
+                this.scene.add(this.tetherLine);
             },
 
             loadLevel(num) {
@@ -600,6 +697,7 @@
                     }
                 }
 
+                // الوحوش
                 for(let i=0; i<this.lvl.monsters; i++) {
                     const m = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.5, 1.5), new THREE.MeshPhongMaterial({map: TextureEngine.Lurker}));
                     let mx = Math.floor(Math.random()*this.lvl.size); let mz = Math.floor(Math.random()*this.lvl.size);
@@ -610,17 +708,34 @@
                     }
                 }
 
+                // نقاط البداية - تحديث لنزول اللاعبين بالقرب من بعضهما وضمن حدود الجنزير
                 const st = new THREE.Vector3(this.lvl.start.x*b, 2.0, this.lvl.start.z*b);
-                this.guidePos.copy(st).add(new THREE.Vector3(-0.5,0,0));
-                this.runnerPos.copy(st).add(new THREE.Vector3(0.5,0,0));
+                this.guidePos.copy(st).add(new THREE.Vector3(-0.3,0,0));
+                this.runnerPos.copy(st).add(new THREE.Vector3(0.3,0,0));
+                this.remoteTargetPos.copy(this.remotePos); // تزامن مبدئي
                 this.camera.position.copy(this.localPos);
             },
 
             setupRoleLogic() {
-                this.ambient = new THREE.AmbientLight(0xffffff, 0.03);
+                this.ambient = new THREE.AmbientLight(0xffffff, 0.04);
                 this.scene.add(this.ambient);
 
                 if (this.state.role === 'guide') {
+                    // الرائي: لديه ناضور (NVG) وكشاف أزرق فاتح
+                    this.scene.fog = new THREE.FogExp2(0x010101, 0.15);
+                    
+                    // إضافة كشاف خاص بالرائي (بيل أزرق/أبيض بارد)
+                    this.guideFlash = new THREE.SpotLight(0xaaccff, 4.0, 25.0, Math.PI / 5, 0.7, 1.5);
+                    this.guideFlash.position.set(0.5, -0.3, 0); 
+                    this.camera.add(this.guideFlash);
+                    this.guideFlash.target.position.set(0.5, -0.3, -5);
+                    this.camera.add(this.guideFlash.target);
+                    
+                    this.bounceLight = new THREE.PointLight(0xaaccff, 0.2, 4.0);
+                    this.camera.add(this.bounceLight);
+                    this.scene.add(this.camera);
+
+                    // زر الناضور NVG
                     this.nvgBtn = document.getElementById('btn-nvg');
                     this.nvgBtn.style.display = 'flex';
                     this.nvgState = false;
@@ -636,31 +751,32 @@
                         });
 
                         if(this.nvgState) {
-                            this.scene.background.setHex(0x001100);
+                            this.scene.background.setHex(0x001500);
                             this.ambient.color.setHex(0x00ff00);
-                            this.ambient.intensity = 0.6;
-                            this.scene.fog = new THREE.Fog(0x001100, 1, 6); 
+                            this.ambient.intensity = 0.5;
+                            this.scene.fog.color.setHex(0x001500);
+                            this.guideFlash.intensity = 1.0; // تخفيف الكشاف أثناء الناضور
                         } else {
                             this.scene.background.setHex(0x010101);
                             this.ambient.color.setHex(0xffffff);
-                            this.ambient.intensity = 0.03;
-                            this.scene.fog = null;
+                            this.ambient.intensity = 0.04;
+                            this.scene.fog.color.setHex(0x010101);
+                            this.guideFlash.intensity = 4.0;
                         }
                     });
 
                 } else {
+                    // المتحكم: كشاف أصفر قوي وساطع
                     this.scene.fog = new THREE.FogExp2(0x010101, 0.12);
                     
-                    this.flash = new THREE.SpotLight(0xfff5e6, 5.0, 30.0, Math.PI / 5, 0.8, 1.2);
+                    this.flash = new THREE.SpotLight(0xfff5e6, 6.0, 35.0, Math.PI / 5, 0.8, 1.2);
                     this.flash.position.set(0.6, -0.4, 0); 
                     this.camera.add(this.flash);
-                    
                     this.flash.target.position.set(0.6, -0.4, -5);
                     this.camera.add(this.flash.target);
 
-                    this.bounceLight = new THREE.PointLight(0xffffff, 0.3, 5.0);
+                    this.bounceLight = new THREE.PointLight(0xffeedd, 0.35, 5.0);
                     this.camera.add(this.bounceLight);
-                    
                     this.scene.add(this.camera); 
                     
                     this.doorBtn = document.getElementById('btn-door');
@@ -668,7 +784,7 @@
                         if(this.nearDoor) {
                             this.nearDoor.open = !this.nearDoor.open;
                             this.nearDoor.targetRot = this.nearDoor.open ? Math.PI/2 : 0;
-                            // مزامنة حركة الباب عبر NetworkController
+                            // إرسال البيانات للسيرفر
                             NetworkController.emit('door_toggle', { 
                                 gx: this.nearDoor.gx, 
                                 gz: this.nearDoor.gz, 
@@ -696,10 +812,10 @@
                     if(e.pointerId === mId) {
                         let dx = e.clientX - mOrg.x, dy = e.clientY - mOrg.y;
                         let dist = Math.sqrt(dx*dx + dy*dy);
-                        if(dist > 35) { dx=(dx/dist)*35; dy=(dy/dist)*35; }
+                        if(dist > 40) { dx=(dx/dist)*40; dy=(dy/dist)*40; }
                         jTh.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                        this.input.mx = Math.abs(dx/35)>0.2 ? dx/35 : 0;
-                        this.input.my = Math.abs(dy/35)>0.2 ? dy/35 : 0;
+                        this.input.mx = Math.abs(dx/40)>0.15 ? dx/40 : 0;
+                        this.input.my = Math.abs(dy/40)>0.15 ? dy/40 : 0;
                     }
                 });
                 const stopM = e => { if(e.pointerId===mId){ mId=null; jBg.style.opacity='0'; this.input.mx=this.input.my=0; }};
@@ -710,8 +826,8 @@
                     if(e.pointerId === lId) {
                         let dx = e.clientX - lLast.x, dy = e.clientY - lLast.y;
                         lLast = {x: e.clientX, y: e.clientY};
-                        this.camera.rotation.y -= dx * 0.005;
-                        this.camera.rotation.x -= dy * 0.005;
+                        this.camera.rotation.y -= dx * 0.006;
+                        this.camera.rotation.x -= dy * 0.006;
                         this.camera.rotation.x = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, this.camera.rotation.x));
                         this.camera.rotation.order = "YXZ"; 
                     }
@@ -720,7 +836,7 @@
                 zR.addEventListener('pointerup', stopL); zR.addEventListener('pointercancel', stopL);
 
                 document.getElementById('btn-jump').addEventListener('pointerdown', () => {
-                    if(this.isGrounded) { this.velY = 7.0; this.isGrounded = false; }
+                    if(this.isGrounded) { this.velY = 8.0; this.isGrounded = false; }
                 });
             },
 
@@ -738,10 +854,50 @@
                 return false;
             },
 
-            tick() {
-                const dt = Math.min(this.clock.getDelta(), 0.05);
+            updateVisuals() {
+                // 1. تحديث مكان الأفاتار
+                this.remotePos.lerp(this.remoteTargetPos, 0.2); // تنعيم الحركة (Interpolation)
+                this.avatarMesh.position.copy(this.remotePos);
+                this.avatarMesh.position.y -= 0.5; // تعديل الارتفاع ليتماشى مع الكاميرا
+
+                // 2. تحديث الجنزير (المنحنى)
+                const dist = this.localPos.distanceTo(this.remotePos);
+                const midPoint = this.localPos.clone().lerp(this.remotePos, 0.5);
                 
-                const spd = 4.0 * dt;
+                // حساب مقدار ارتخاء الجنزير (Sagging)
+                let sag = Math.max(0, (this.state.tetherMax - dist) * 0.8);
+                midPoint.y -= sag; // ينزل للأسفل إذا كان مرتخياً
+
+                const curve = new THREE.QuadraticBezierCurve3(
+                    this.localPos.clone().add(new THREE.Vector3(0,-0.5,0)), // من مستوى خصر اللاعب الأول
+                    midPoint, 
+                    this.remotePos.clone().add(new THREE.Vector3(0,-0.5,0)) // إلى مستوى خصر اللاعب الثاني
+                );
+                
+                this.tetherLine.geometry.setFromPoints(curve.getPoints(15));
+
+                // تغيير لون الجنزير وتحديث واجهة الشد
+                let tensionPercent = Math.min(100, Math.round((dist / this.state.tetherMax) * 100));
+                document.getElementById('tension-val').innerText = tensionPercent;
+                
+                if (dist > this.state.tetherMax * 0.95) {
+                    this.tetherLine.material.color.setHex(0xff0000); // أحمر (مشدود)
+                    document.getElementById('tension-val').style.color = '#f00';
+                    if (Math.random() < 0.1) AudioEngine.playTension(1.0); // صوت الشد
+                } else if (dist > this.state.tetherMax * 0.7) {
+                    this.tetherLine.material.color.setHex(0xffaa00); // برتقالي
+                    document.getElementById('tension-val').style.color = '#fa0';
+                } else {
+                    this.tetherLine.material.color.setHex(0x555555); // رمادي (مرتخي)
+                    document.getElementById('tension-val').style.color = '#0f0';
+                }
+            },
+
+            tick() {
+                const dt = Math.min(this.clock.getDelta(), 0.05); // حماية من تقطيع الإطارات
+                
+                // 1. حساب الحركة المطلوبة
+                const spd = 4.5 * dt;
                 const fwd = new THREE.Vector3(0,0,-1).applyQuaternion(this.camera.quaternion);
                 const rgt = new THREE.Vector3(1,0,0).applyQuaternion(this.camera.quaternion);
                 fwd.y=0; rgt.y=0; fwd.normalize(); rgt.normalize();
@@ -751,44 +907,61 @@
                 mDir.addScaledVector(rgt, this.input.mx);
                 mDir.normalize().multiplyScalar(spd);
 
-                let nx = this.localPos.x + mDir.x;
-                let nz = this.localPos.z + mDir.z;
+                // الموضع المستهدف قبل التصادمات
+                let nextPos = this.localPos.clone().add(mDir);
 
-                // استقرار الاصطدام
-                if(this.checkCol(nx, this.localPos.z)) nx = this.localPos.x;
-                if(this.checkCol(this.localPos.x, nz)) nz = this.localPos.z;
-
-                this.velY -= 15 * dt; 
-                let ny = this.localPos.y + (this.velY * dt);
-
-                if(ny <= 2.0) { ny = 2.0; this.velY = 0; this.isGrounded = true; }
-                this.localPos.set(nx, ny, nz);
-
-                // فيزياء الجنزير المستقرة (Tether Physics)
-                const dist = this.localPos.distanceTo(this.remotePos);
-                
+                // ==========================================================
+                // 2. إصلاح حركة الرائي (Tether Movement Boundary Fix)
+                // ==========================================================
+                // إذا كان اللاعب هو الرائي، فهو مقيد داخل كرة وهمية نصف قطرها tetherMax ومركزها هو المتحكم
                 if (this.state.role === 'guide') {
-                    if (dist > this.state.tetherMax) {
-                        const pullDir = this.remotePos.clone().sub(this.localPos).normalize();
-                        const correction = dist - this.state.tetherMax;
-                        
-                        let px = this.localPos.x + (pullDir.x * correction);
-                        let pz = this.localPos.z + (pullDir.z * correction);
-                        
-                        // منع الاختراق أثناء السحب
-                        if(this.checkCol(px, this.localPos.z)) px = this.localPos.x;
-                        if(this.checkCol(this.localPos.x, pz)) pz = this.localPos.z;
-                        
-                        this.localPos.set(px, this.localPos.y, pz);
+                    const distToMaster = nextPos.distanceTo(this.remotePos);
+                    if (distToMaster > this.state.tetherMax) {
+                        // إزاحة الموقع المقترح ليكون على حافة الكرة بالضبط (الانزلاق على الحافة)
+                        const dirFromMaster = nextPos.clone().sub(this.remotePos).normalize();
+                        nextPos = this.remotePos.clone().add(dirFromMaster.multiplyScalar(this.state.tetherMax));
                     }
+                }
+
+                // 3. التحقق من اصطدام الجدران للموقع الجديد
+                if(this.checkCol(nextPos.x, this.localPos.z)) nextPos.x = this.localPos.x;
+                if(this.checkCol(this.localPos.x, nextPos.z)) nextPos.z = this.localPos.z;
+
+                // 4. تطبيق الجاذبية
+                this.velY -= 18 * dt; 
+                let ny = this.localPos.y + (this.velY * dt);
+                if(ny <= 2.0) { ny = 2.0; this.velY = 0; this.isGrounded = true; }
+                
+                // تحديث الموقع المحلي
+                this.localPos.set(nextPos.x, ny, nextPos.z);
+
+                // ==========================================================
+                // 5. فيزياء السحب (Dragging Physics)
+                // ==========================================================
+                // إذا تحرك المتحكم بعيداً، يجب أن يُسحب الرائي قسراً!
+                const currentDist = this.localPos.distanceTo(this.remotePos);
+                if (this.state.role === 'guide' && currentDist > this.state.tetherMax) {
+                    const pullDir = this.remotePos.clone().sub(this.localPos).normalize();
+                    const dragAmount = currentDist - this.state.tetherMax;
+                    
+                    let draggedPos = this.localPos.clone().add(pullDir.multiplyScalar(dragAmount));
+                    
+                    // تأكد أن السحب لا يدخل الرائي في جدار
+                    if(this.checkCol(draggedPos.x, this.localPos.z)) draggedPos.x = this.localPos.x;
+                    if(this.checkCol(this.localPos.x, draggedPos.z)) draggedPos.z = this.localPos.z;
+                    
+                    this.localPos.set(draggedPos.x, this.localPos.y, draggedPos.z);
                 }
 
                 this.camera.position.copy(this.localPos);
 
+                // 6. التحديثات المرئية والتفاعلات
+                this.updateVisuals();
                 this.updateWorld(dt);
                 this.checkInteractions();
                 
-                // إرسال البيانات عبر NetworkController المحدث
+                // 7. إرسال البيانات بشكل موثوق للسيرفر
+                // نرسل الموقع باستمرار ليراه اللاعب الآخر
                 NetworkController.emit('sync_pos', {
                     lvl: this.state.level,
                     x: this.localPos.x, 
@@ -800,6 +973,7 @@
             },
 
             updateWorld(dt) {
+                // الأبواب
                 this.nearDoor = null;
                 for(let d of this.doors) {
                     d.grp.rotation.y += (d.targetRot || 0 - d.grp.rotation.y) * 10 * dt;
@@ -811,38 +985,46 @@
                 }
                 if(this.state.role === 'runner') this.doorBtn.style.display = this.nearDoor ? 'flex' : 'none';
 
+                // الأشواك
                 for(let s of this.spikes) {
                     s.timer -= dt;
                     if(s.timer <= 0) { s.active = !s.active; s.timer = 1.5 + Math.random(); }
-                    s.mesh.position.y += ((s.active ? 0 : -this.blockSize) - s.mesh.position.y) * 10 * dt;
+                    s.mesh.position.y += ((s.active ? 0 : -this.blockSize) - s.mesh.position.y) * 12 * dt;
                     
-                    if(s.active && this.isGrounded && Math.abs(this.localPos.x-s.mesh.position.x)<1 && Math.abs(this.localPos.z-s.mesh.position.z)<1) {
-                        this.velY = 4; this.isGrounded = false; 
+                    if(s.active && this.isGrounded && Math.abs(this.localPos.x-s.mesh.position.x)<1.2 && Math.abs(this.localPos.z-s.mesh.position.z)<1.2) {
+                        this.velY = 5; this.isGrounded = false; // ضربة ارتدادية
                         document.getElementById('flash-overlay').style.background = '#f00';
-                        document.getElementById('flash-overlay').style.opacity = '0.4';
-                        setTimeout(() => document.getElementById('flash-overlay').style.opacity='0', 200);
+                        document.getElementById('flash-overlay').style.opacity = '0.5';
+                        setTimeout(() => document.getElementById('flash-overlay').style.opacity='0', 250);
                     }
                 }
 
-                let fDir = (this.state.role === 'runner' && this.flash) ? new THREE.Vector3(0,0,-1).applyQuaternion(this.camera.quaternion) : null;
+                // الوحوش
+                let actFlash = (this.state.role === 'runner' && this.flash) ? this.flash : ((this.state.role === 'guide' && this.guideFlash) ? this.guideFlash : null);
+                let fDir = actFlash ? new THREE.Vector3(0,0,-1).applyQuaternion(this.camera.quaternion) : null;
+                
                 for(let i = this.monsters.length-1; i>=0; i--) {
                     let m = this.monsters[i];
                     if(fDir) {
                         const toM = m.mesh.position.clone().sub(this.localPos);
+                        // الوحوش تتضرر من ضوء المتحكم أو الرائي
                         if(toM.length() < 12.0 && fDir.dot(toM.normalize()) > 0.85) {
-                            m.hp -= 60 * dt;
+                            m.hp -= (this.state.role === 'runner' ? 80 : 30) * dt; // ضوء المتحكم أقوى حرقاً
                             m.mesh.material.color.setHex(0xffaaaa);
                             if(m.hp <= 0) {
+                                AudioEngine.playMonsterHit();
                                 this.worldGroup.remove(m.mesh); this.monsters.splice(i,1);
                                 document.getElementById('flash-overlay').style.background = '#fff';
                                 document.getElementById('flash-overlay').style.opacity = '0.8';
                                 setTimeout(() => document.getElementById('flash-overlay').style.opacity='0', 150);
                                 continue;
                             }
-                        } else m.mesh.material.color.setHex(0xffffff);
+                        } else {
+                            m.mesh.material.color.setHex(0xffffff);
+                        }
                     }
                     
-                    let nP = m.mesh.position.clone().add(m.dir.clone().multiplyScalar(1.5*dt));
+                    let nP = m.mesh.position.clone().add(m.dir.clone().multiplyScalar(1.2*dt));
                     if(this.checkCol(nP.x, nP.z)) m.dir.set(Math.random()-0.5,0,Math.random()-0.5).normalize();
                     else m.mesh.position.copy(nP);
                 }
