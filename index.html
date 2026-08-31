@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Dark Tether - 50 Stages (Ultimate Voxel & Voice)</title>
+    <title>Dark Tether - 50 Stages (Ultimate Stability & Voice)</title>
     
+    <!-- استدعاء مكتبة Socket.IO للاتصال اللحظي -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     
     <style>
         :root { --c-main: #3b82f6; --c-run: #ef4444; --c-bg: #020202; }
@@ -59,14 +60,13 @@
         #joystick-bg { position: absolute; width: 100px; height: 100px; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0; pointer-events: none; }
         #joystick-thumb { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
 
-        /* الأزرار التفاعلية (يمين) */
+        /* الأزرار التفاعلية */
         .right-buttons { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; pointer-events: auto; }
         .action-btn { width: 55px; height: 55px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 1.3rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(5px); }
         .action-btn:active { transform: scale(0.9); }
         
         #btn-door { display: none; background: rgba(150, 80, 20, 0.6); border-color: #f90; }
         
-        /* زر الناضور للرائي فقط */
         #btn-nvg { position: absolute; top: 20px; right: 20px; width: 50px; height: 50px; background: rgba(0,30,0,0.6); border: 1px solid #0f0; color: #0f0; font-size: 0.8rem; font-weight: bold; border-radius: 8px; display: none; pointer-events: auto; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
         #btn-nvg.active { background: rgba(0,255,0,0.3); box-shadow: 0 0 15px #0f0; color: #fff; }
 
@@ -98,12 +98,10 @@
 
     <div id="hud-layer">
         <div class="crosshair"></div>
-        
         <div id="top-hud">
             <div>المرحلة: <span id="level-num">1</span>/50</div>
             <div>المهام: <span id="task-count">0</span></div>
         </div>
-        
         <div id="hint-ui">...</div>
         <div id="btn-nvg">NVG</div>
 
@@ -199,7 +197,7 @@
         }
 
         // ============================================================================
-        // 2. ENGINE: 50-Stage Cryptic Level Architect
+        // 2. ENGINE: 50-Stage Cryptic Level Architect (Guaranteed Paths)
         // ============================================================================
         const HINT_DATABASE = [
             "الظلام ليس فارغاً، إنه ينظر إليك.", "نصف متر فقط تفصلك عن النهاية.", 
@@ -230,11 +228,18 @@
                 };
                 carve(1, 1);
 
+                // ضمان فتح طريق للنهاية
+                grid[s-2][s-2] = 0; grid[s-3][s-2] = 0; grid[s-2][s-3] = 0;
+
                 const roomCount = Math.floor(levelNum / 4);
                 for(let i=0; i<roomCount; i++) {
                     let rx = Math.floor(Math.random()*(s-4))+2;
                     let ry = Math.floor(Math.random()*(s-4))+2;
-                    for(let dy=0; dy<3; dy++) for(let dx=0; dx<3; dx++) grid[ry+dy][rx+dx] = 0;
+                    for(let dy=0; dy<3; dy++) {
+                        for(let dx=0; dx<3; dx++) {
+                            if (ry+dy < s-1 && rx+dx < s-1) grid[ry+dy][rx+dx] = 0;
+                        }
+                    }
                 }
 
                 for(let y=s-2; y>0; y--) {
@@ -264,11 +269,75 @@
         }
 
         // ============================================================================
-        // 3. ENGINE: Audio & Chat System (Walkie-Talkie Push-to-Talk & Radio Effect)
+        // 3. NETWORK CONTROLLER (كما ورد في الوثيقة للربط الموثوق)
+        // ============================================================================
+        const NetworkController = {
+            socket: null,
+            SERVER_URL: 'https://render-kr1o.onrender.com/',
+            
+            init() {
+                try {
+                    this.socket = io(this.SERVER_URL, { transports: ['websocket'] });
+                    
+                    this.socket.on('connect', () => { 
+                        console.log("Connected securely to Server.");
+                        // إرسال معلومات الانضمام فوراً
+                        this.emit('join_room', { name: GameCore.state.name });
+                    });
+                    
+                    // الاستماع للبيانات القادمة من السيرفر بالنمط المعتمد
+                    this.socket.on('otherPlayerMoved', (data) => this.processIncoming(data));
+                    
+                    // أحداث الصوت والمحادثة المخصصة
+                    this.socket.on('chatMsg', (data) => GameCore.commSys.handleChat(data));
+                    this.socket.on('voiceData', (data) => GameCore.commSys.handleVoice(data));
+                    
+                } catch (e) { console.error("Network Initialization Failed:", e); }
+            },
+            
+            emit(type, payload) { 
+                if (this.socket?.connected) {
+                    this.socket.emit('playerMoved', { 
+                        type, 
+                        room: GameCore.state.room, 
+                        role: GameCore.state.role,
+                        ...payload 
+                    }); 
+                }
+            },
+            
+            emitRaw(eventName, payload) {
+                if (this.socket?.connected) this.socket.emit(eventName, payload);
+            },
+            
+            processIncoming(data) {
+                if (data.room !== GameCore.state.room || data.role === GameCore.state.role) return; 
+                
+                switch (data.type) {
+                    case 'sync_pos': 
+                        GameCore.remotePos.set(data.x, data.y, data.z);
+                        if (data.lvl > GameCore.state.level) {
+                            GameCore.state.level = data.lvl;
+                            GameCore.loadLevel(data.lvl);
+                        }
+                        break;
+                    case 'door_toggle': 
+                        const door = GameCore.doors.find(d => d.gx === data.gx && d.gz === data.gz);
+                        if (door) {
+                            door.open = data.open;
+                            door.targetRot = door.open ? Math.PI / 2 : 0;
+                        }
+                        break;
+                }
+            }
+        };
+
+        // ============================================================================
+        // 4. ENGINE: Audio & Chat System (Walkie-Talkie Push-to-Talk)
         // ============================================================================
         class CommunicationSystem {
-            constructor(socket, room, role) {
-                this.socket = socket; this.room = room; this.role = role;
+            constructor(room, role) {
+                this.room = room; this.role = role;
                 
                 this.chatBtn = document.getElementById('btn-chat');
                 this.chatBox = document.getElementById('chat-box');
@@ -286,7 +355,7 @@
                     if(e.key === 'Enter' && this.chatInput.value.trim() !== '') {
                         const msg = this.chatInput.value.trim();
                         this.appendMsg('أنت', msg, '#3b82f6');
-                        if(this.socket) this.socket.emit('chatMsg', { room: this.room, sender: this.role, text: msg });
+                        NetworkController.emitRaw('chatMsg', { room: this.room, sender: this.role, text: msg });
                         this.chatInput.value = '';
                     }
                 });
@@ -318,30 +387,28 @@
                 this.micBtn.addEventListener('pointerdown', startMic);
                 this.micBtn.addEventListener('pointerup', stopMic);
                 this.micBtn.addEventListener('pointerleave', stopMic);
-
-                if(this.socket) {
-                    this.socket.on('chatMsg', data => {
-                        if(data.sender !== this.role) this.appendMsg(data.sender, data.text, '#ef4444');
-                    });
-
-                    this.socket.on('voiceData', async data => {
-                        if(data.role !== this.role && data.signal) {
-                            if(!this.peer) this.initPeer();
-                            if(data.signal.sdp) {
-                                await this.peer.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
-                                if(data.signal.sdp.type === 'offer') {
-                                    const ans = await this.peer.createAnswer();
-                                    await this.peer.setLocalDescription(ans);
-                                    this.socket.emit('voiceData', { room: this.room, role: this.role, signal: { sdp: this.peer.localDescription } });
-                                }
-                            } else if(data.signal.ice) {
-                                await this.peer.addIceCandidate(new RTCIceCandidate(data.signal.ice));
-                            }
-                        }
-                    });
-                }
                 
                 setTimeout(() => this.initLiveCall(), 1500);
+            }
+
+            handleChat(data) {
+                if(data.sender !== this.role) this.appendMsg(data.sender, data.text, '#ef4444');
+            }
+
+            async handleVoice(data) {
+                if(data.role !== this.role && data.signal) {
+                    if(!this.peer) this.initPeer();
+                    if(data.signal.sdp) {
+                        await this.peer.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+                        if(data.signal.sdp.type === 'offer') {
+                            const ans = await this.peer.createAnswer();
+                            await this.peer.setLocalDescription(ans);
+                            NetworkController.emitRaw('voiceData', { room: this.room, role: this.role, signal: { sdp: this.peer.localDescription } });
+                        }
+                    } else if(data.signal.ice) {
+                        await this.peer.addIceCandidate(new RTCIceCandidate(data.signal.ice));
+                    }
+                }
             }
 
             async initLiveCall() {
@@ -354,14 +421,14 @@
                     this.localStream.getTracks().forEach(t => this.peer.addTrack(t, this.localStream));
                     const offer = await this.peer.createOffer();
                     await this.peer.setLocalDescription(offer);
-                    this.socket.emit('voiceData', { room: this.room, role: this.role, signal: { sdp: this.peer.localDescription } });
+                    NetworkController.emitRaw('voiceData', { room: this.room, role: this.role, signal: { sdp: this.peer.localDescription } });
                 } catch(e) { console.warn("Mic Error", e); }
             }
 
             initPeer() {
                 this.peer = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
                 this.peer.onicecandidate = e => {
-                    if(e.candidate) this.socket.emit('voiceData', { room: this.room, role: this.role, signal: { ice: e.candidate } });
+                    if(e.candidate) NetworkController.emitRaw('voiceData', { room: this.room, role: this.role, signal: { ice: e.candidate } });
                 };
                 
                 this.peer.ontrack = e => {
@@ -383,14 +450,11 @@
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
                     this.audioCtx = new AudioContext();
                 }
-                
                 const source = this.audioCtx.createMediaStreamSource(stream);
-                
                 const bandpass = this.audioCtx.createBiquadFilter();
                 bandpass.type = 'bandpass';
                 bandpass.frequency.value = 1200; 
                 bandpass.Q.value = 0.8; 
-
                 const distortion = this.audioCtx.createWaveShaper();
                 distortion.curve = this.makeDistortionCurve(15);
                 distortion.oversample = '4x';
@@ -398,7 +462,6 @@
                 source.connect(bandpass);
                 bandpass.connect(distortion);
                 distortion.connect(this.audioCtx.destination);
-                
                 this.audioCtx.resume();
             }
 
@@ -421,7 +484,7 @@
         }
 
         // ============================================================================
-        // 4. ENGINE: Core Game Physics & Logic
+        // 5. ENGINE: Core Game Physics & Logic
         // ============================================================================
         const GameCore = {
             state: { role: '', room: '', name: '', level: 1, tetherMax: 1.0 }, 
@@ -434,6 +497,10 @@
                 
                 this.state.role = role;
                 document.getElementById('lobby-ui').style.opacity = '0';
+                
+                // بدء تشغيل الشبكة أولاً
+                NetworkController.init();
+
                 setTimeout(() => {
                     document.getElementById('lobby-ui').style.display = 'none';
                     document.getElementById('hud-layer').style.display = 'block';
@@ -453,7 +520,6 @@
                 this.renderer.setPixelRatio(1);
                 document.getElementById('game-canvas').appendChild(this.renderer.domElement);
 
-                // تغيير الخامات إلى MeshPhongMaterial لضمان تفاعلها مع الإضاءة (الكشاف) بشكل دقيق على كل بكسل
                 this.mats = {
                     floor: new THREE.MeshPhongMaterial({ map: TextureEngine.StoneFloor }),
                     wall: new THREE.MeshPhongMaterial({ map: TextureEngine.BrickWall }),
@@ -473,11 +539,10 @@
                 this.remotePos = this.state.role === 'guide' ? this.runnerPos : this.guidePos;
                 this.velY = 0; this.isGrounded = true;
 
-                this.setupNetwork();
                 this.setupRoleLogic();
                 this.setupInputs();
                 
-                this.commSys = new CommunicationSystem(this.socket, this.state.room, this.state.role);
+                this.commSys = new CommunicationSystem(this.state.room, this.state.role);
 
                 this.loadLevel(this.state.level);
 
@@ -552,7 +617,7 @@
             },
 
             setupRoleLogic() {
-                this.ambient = new THREE.AmbientLight(0xffffff, 0.03); // إضاءة عامة خفيفة جداً
+                this.ambient = new THREE.AmbientLight(0xffffff, 0.03);
                 this.scene.add(this.ambient);
 
                 if (this.state.role === 'guide') {
@@ -584,18 +649,15 @@
                     });
 
                 } else {
-                    // المتحكم: إضاءة واقعية مدمجة (كشاف + ضوء ارتدادي للجسد)
-                    this.scene.fog = new THREE.FogExp2(0x010101, 0.12); // تخفيف الضباب لتوضيح الإضاءة
+                    this.scene.fog = new THREE.FogExp2(0x010101, 0.12);
                     
-                    // الكشاف الرئيسي الموجه للأمام: (اللون، الشدة، المسافة، الزاوية، نعومة الحواف، التلاشي)
                     this.flash = new THREE.SpotLight(0xfff5e6, 5.0, 30.0, Math.PI / 5, 0.8, 1.2);
-                    this.flash.position.set(0.6, -0.4, 0); // محاكاة الإمساك به باليد اليمنى
+                    this.flash.position.set(0.6, -0.4, 0); 
                     this.camera.add(this.flash);
                     
                     this.flash.target.position.set(0.6, -0.4, -5);
                     this.camera.add(this.flash.target);
 
-                    // ضوء ارتدادي خفيف (PointLight) لإضاءة الأرضية والجدران المحيطة باللاعب مباشرة
                     this.bounceLight = new THREE.PointLight(0xffffff, 0.3, 5.0);
                     this.camera.add(this.bounceLight);
                     
@@ -606,6 +668,12 @@
                         if(this.nearDoor) {
                             this.nearDoor.open = !this.nearDoor.open;
                             this.nearDoor.targetRot = this.nearDoor.open ? Math.PI/2 : 0;
+                            // مزامنة حركة الباب عبر NetworkController
+                            NetworkController.emit('door_toggle', { 
+                                gx: this.nearDoor.gx, 
+                                gz: this.nearDoor.gz, 
+                                open: this.nearDoor.open 
+                            });
                         }
                     });
                 }
@@ -656,18 +724,6 @@
                 });
             },
 
-            setupNetwork() {
-                try {
-                    this.socket = io('https://render-kr1o.onrender.com/', { transports: ['websocket'] });
-                    this.socket.on('syncEngine', d => {
-                        if(d.role !== this.state.role) {
-                            this.remotePos.set(d.x, d.y, d.z);
-                            if(d.lvl > this.state.level) { this.state.level = d.lvl; this.loadLevel(d.lvl); }
-                        }
-                    });
-                } catch(e) {}
-            },
-
             checkCol(x, z) {
                 const b = this.blockSize;
                 const gx = Math.round(x/b), gz = Math.round(z/b);
@@ -698,6 +754,7 @@
                 let nx = this.localPos.x + mDir.x;
                 let nz = this.localPos.z + mDir.z;
 
+                // استقرار الاصطدام
                 if(this.checkCol(nx, this.localPos.z)) nx = this.localPos.x;
                 if(this.checkCol(this.localPos.x, nz)) nz = this.localPos.z;
 
@@ -707,6 +764,7 @@
                 if(ny <= 2.0) { ny = 2.0; this.velY = 0; this.isGrounded = true; }
                 this.localPos.set(nx, ny, nz);
 
+                // فيزياء الجنزير المستقرة (Tether Physics)
                 const dist = this.localPos.distanceTo(this.remotePos);
                 
                 if (this.state.role === 'guide') {
@@ -717,6 +775,7 @@
                         let px = this.localPos.x + (pullDir.x * correction);
                         let pz = this.localPos.z + (pullDir.z * correction);
                         
+                        // منع الاختراق أثناء السحب
                         if(this.checkCol(px, this.localPos.z)) px = this.localPos.x;
                         if(this.checkCol(this.localPos.x, pz)) pz = this.localPos.z;
                         
@@ -729,12 +788,13 @@
                 this.updateWorld(dt);
                 this.checkInteractions();
                 
-                if(this.socket && this.socket.connected) {
-                    this.socket.emit('syncEngine', {
-                        room: this.state.room, role: this.state.role, lvl: this.state.level,
-                        x: this.localPos.x, y: this.localPos.y, z: this.localPos.z
-                    });
-                }
+                // إرسال البيانات عبر NetworkController المحدث
+                NetworkController.emit('sync_pos', {
+                    lvl: this.state.level,
+                    x: this.localPos.x, 
+                    y: this.localPos.y, 
+                    z: this.localPos.z
+                });
 
                 this.renderer.render(this.scene, this.camera);
             },
